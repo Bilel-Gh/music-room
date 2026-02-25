@@ -38,6 +38,11 @@ model User {
   tracks        Track[]
   votes         Vote[]
 
+  // Relations playlists
+  createdPlaylists Playlist[]       @relation("CreatedPlaylists")
+  playlistMembers  PlaylistMember[]
+  playlistTracks   PlaylistTrack[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -128,4 +133,54 @@ model EventMember {
   joinedAt DateTime @default(now())
 
   @@unique([eventId, userId])
+}
+
+enum PlaylistLicense {
+  OPEN
+  INVITE_ONLY
+}
+
+model Playlist {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  creatorId   String
+  isPublic    Boolean         @default(true)
+  licenseType PlaylistLicense @default(OPEN)
+
+  creator User             @relation("CreatedPlaylists", fields: [creatorId], references: [id])
+  members PlaylistMember[]
+  tracks  PlaylistTrack[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlaylistTrack {
+  id          String  @id @default(uuid())
+  playlistId  String
+  title       String
+  artist      String
+  externalUrl String?
+  addedById   String
+  position    Int
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  addedBy  User     @relation(fields: [addedById], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model PlaylistMember {
+  id         String  @id @default(uuid())
+  playlistId String
+  userId     String
+  canEdit    Boolean @default(true)
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  joinedAt DateTime @default(now())
+
+  @@unique([playlistId, userId])
 }

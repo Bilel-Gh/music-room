@@ -2,6 +2,7 @@ import { Router } from 'express';
 import passport from '../config/passport.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { authenticate } from '../middleware/auth.middleware.js';
+import { authLimiter } from '../config/rate-limit.js';
 import {
   registerSchema,
   loginSchema,
@@ -46,7 +47,7 @@ const router = Router();
  *       409:
  *         description: Email déjà utilisé
  */
-router.post('/register', validate(registerSchema), authController.register);
+router.post('/register', authLimiter, validate(registerSchema), authController.register);
 
 /**
  * @swagger
@@ -74,7 +75,7 @@ router.post('/register', validate(registerSchema), authController.register);
  *       401:
  *         description: Identifiants invalides
  */
-router.post('/login', validate(loginSchema), authController.login);
+router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
 /**
  * @swagger
@@ -151,7 +152,7 @@ router.post('/verify-email', validate(verifyEmailSchema), authController.verifyE
  *       200:
  *         description: Demande acceptée (token dans les logs serveur)
  */
-router.post('/forgot-password', validate(forgotPasswordSchema), authController.forgotPassword);
+router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
 
 /**
  * @swagger
