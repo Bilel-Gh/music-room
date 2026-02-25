@@ -5,6 +5,7 @@ import swaggerUi from 'swagger-ui-express';
 import passport from './config/passport.js';
 import { swaggerSpec } from './config/swagger.js';
 import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 
 const app = express();
@@ -21,6 +22,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 app.use(errorHandler);
 

@@ -17,11 +17,35 @@ model User {
   emailVerified Boolean   @default(false)
   isAdmin       Boolean   @default(false)
 
+  // Champs de profil avec niveaux de visibilité
+  publicInfo       String?
+  friendsInfo      String?
+  privateInfo      String?
+  musicPreferences String[]
+
   verificationCode       String?
   verificationCodeExpiry DateTime?
   resetToken             String?
   resetTokenExpiry       DateTime?
 
+  // Relations amitié
+  sentRequests     Friendship[] @relation("SentRequests")
+  receivedRequests Friendship[] @relation("ReceivedRequests")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Friendship {
+  id       String @id @default(uuid())
+  userId   String
+  friendId String
+  status   String @default("PENDING") // PENDING | ACCEPTED
+
+  user   User @relation("SentRequests", fields: [userId], references: [id])
+  friend User @relation("ReceivedRequests", fields: [friendId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId])
 }
