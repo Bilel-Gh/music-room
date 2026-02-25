@@ -1,0 +1,140 @@
+import prisma from '../lib/prisma.js';
+import type { CreateEventInput, UpdateEventInput, AddTrackInput } from '../schemas/event.schema.js';
+
+export async function createEvent(data: CreateEventInput, userId: string) {
+  const event = await prisma.event.create({
+    data: {
+      ...data,
+      startTime: data.startTime ? new Date(data.startTime) : null,
+      endTime: data.endTime ? new Date(data.endTime) : null,
+      creatorId: userId,
+      members: {
+        create: { userId, role: 'CREATOR' },
+      },
+    },
+  });
+
+  return event;
+}
+
+export async function getEvent(eventId: string) {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    include: {
+      creator: { select: { id: true, name: true } },
+      _count: { select: { members: true, tracks: true } },
+    },
+  });
+
+  if (!event) {
+    throw Object.assign(new Error('Event not found'), { status: 404 });
+  }
+
+  return event;
+}
+
+export async function listEvents() {
+  return prisma.event.findMany({
+    where: { isPublic: true },
+    include: {
+      creator: { select: { id: true, name: true } },
+      _count: { select: { members: true, tracks: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export async function updateEvent(eventId: string, userId: string, data: UpdateEventInput) {
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) {
+    throw Object.assign(new Error('Event not found'), { status: 404 });
+  }
+  if (event.creatorId !== userId) {
+    throw Object.assign(new Error('Only the creator can update this event'), { status: 403 });
+  }
+
+  return prisma.event.update({
+    where: { id: eventId },
+    data: {
+      ...data,
+      startTime: data.startTime !== undefined ? (data.startTime ? new Date(data.startTime) : null) : undefined,
+      endTime: data.endTime !== undefined ? (data.endTime ? new Date(data.endTime) : null) : undefined,
+    },
+  });
+}
+
+export async function deleteEvent(eventId: string, userId: string) {
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) {
+    throw Object.assign(new Error('Event not found'), { status: 404 });
+  }
+  if (event.creatorId !== userId) {
+    throw Object.assign(new Error('Only the creator can delete this event'), { status: 403 });
+  }
+
+  await prisma.event.delete({ where: { id: eventId } });
+}
+
+export async function joinEvent(eventId: string, userId: string) {
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) {
+    throw Object.assign(new Error('Event not found'), { status: 404 });
+  }
+
+  // Vérifier si déjà membre
+  const existing = await prisma.eventMember.findUnique({
+    where: { eventId_userId: { eventId, userId } },
+  });
+  if (existing) {
+    throw Object.assign(new Error('Already a member of this event'), { status: 409 });
+  }
+
+  if (event.licenseType === 'INVITE_ONLY') {
+    throw Object.assign(new Error('This event is invite-only'), { status: 403 });
+  }
+
+  return prisma.eventMember.create({
+    data: { eventId, userId, role: 'PARTICIPANT' },
+  });
+}
+
+export async function addTrack(eventId: string, data: AddTrackInput, userId: string) {
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) {
+    throw Object.assign(new Error('Event not found'), { status: 404 });
+  }
+
+  // Pour INVITE_ONLY, il faut être membre
+  if (event.licenseType === 'INVITE_ONLY') {
+    const member = await prisma.eventMember.findUnique({
+      where: { eventId_userId: { eventId, userId } },
+    });
+    if (!member) {
+      throw Object.assign(new Error('You must be a member to add tracks'), { status: 403 });
+    }
+  }
+
+  return prisma.track.create({
+    data: {
+      ...data,
+      eventId,
+      addedById: userId,
+    },
+  });
+}
+
+export async function getEventTracks(eventId: string) {
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) {
+    throw Object.assign(new Error('Event not found'), { status: 404 });
+  }
+
+  return prisma.track.findMany({
+    where: { eventId },
+    include: {
+      addedBy: { select: { id: true, name: true } },
+      _count: { select: { votes: true } },
+    },
+    orderBy: { voteCount: 'desc' },
+  });
+}

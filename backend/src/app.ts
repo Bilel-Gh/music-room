@@ -6,6 +6,7 @@ import passport from './config/passport.js';
 import { swaggerSpec } from './config/swagger.js';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
+import eventRoutes from './routes/event.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/events', eventRoutes);
 
 app.use(errorHandler);
 

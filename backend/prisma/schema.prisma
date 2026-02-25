@@ -32,6 +32,12 @@ model User {
   sentRequests     Friendship[] @relation("SentRequests")
   receivedRequests Friendship[] @relation("ReceivedRequests")
 
+  // Relations événements
+  createdEvents Event[]       @relation("CreatedEvents")
+  eventMembers  EventMember[]
+  tracks        Track[]
+  votes         Vote[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -48,4 +54,78 @@ model Friendship {
   createdAt DateTime @default(now())
 
   @@unique([userId, friendId])
+}
+
+enum LicenseType {
+  OPEN
+  INVITE_ONLY
+  LOCATION_TIME
+}
+
+enum MemberRole {
+  CREATOR
+  INVITED
+  PARTICIPANT
+}
+
+model Event {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  creatorId   String
+  isPublic    Boolean     @default(true)
+  licenseType LicenseType @default(OPEN)
+  startTime   DateTime?
+  endTime     DateTime?
+  latitude    Float?
+  longitude   Float?
+
+  creator User          @relation("CreatedEvents", fields: [creatorId], references: [id])
+  members EventMember[]
+  tracks  Track[]
+
+  createdAt DateTime @default(now())
+}
+
+model Track {
+  id          String  @id @default(uuid())
+  eventId     String
+  title       String
+  artist      String
+  externalUrl String?
+  addedById   String
+  voteCount   Int     @default(0)
+
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  addedBy User   @relation(fields: [addedById], references: [id])
+  votes   Vote[]
+
+  createdAt DateTime @default(now())
+}
+
+model Vote {
+  id      String @id @default(uuid())
+  trackId String
+  userId  String
+
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([trackId, userId])
+}
+
+model EventMember {
+  id      String     @id @default(uuid())
+  eventId String
+  userId  String
+  role    MemberRole @default(PARTICIPANT)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  joinedAt DateTime @default(now())
+
+  @@unique([eventId, userId])
 }
