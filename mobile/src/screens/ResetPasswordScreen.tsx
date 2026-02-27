@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +12,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ResetPassword'>;
 
@@ -24,28 +24,28 @@ export default function ResetPasswordScreen({ navigation }: Props) {
 
   const handleReset = async () => {
     if (!token.trim()) {
-      Alert.alert('Erreur', 'Veuillez entrer le token');
+      crossAlert('Erreur', 'Veuillez entrer le token');
       return;
     }
     if (password.length < 8) {
-      Alert.alert('Erreur', 'Le mot de passe doit faire au moins 8 caracteres');
+      crossAlert('Erreur', 'Le mot de passe doit faire au moins 8 caracteres');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
+      crossAlert('Erreur', 'Les mots de passe ne correspondent pas');
       return;
     }
 
     setLoading(true);
     try {
       await api.post('/auth/reset-password', { token: token.trim(), password });
-      Alert.alert('Succes', 'Mot de passe reinitialise', [
+      crossAlert('Succes', 'Mot de passe reinitialise', [
         { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible de reinitialiser';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setLoading(false);
     }

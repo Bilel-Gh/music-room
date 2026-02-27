@@ -5,13 +5,13 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
-  Alert,
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'UserProfile'>;
 
@@ -49,7 +49,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       const { data } = await api.get(`/users/${userId}`);
       setUser(data.data as UserData);
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger le profil');
+      crossAlert('Erreur', 'Impossible de charger le profil');
     } finally {
       setLoading(false);
     }
@@ -60,11 +60,11 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     try {
       await api.post(`/users/friend-requests/${userId}`);
       setRequestSent(true);
-      Alert.alert('Succes', 'Demande d\'ami envoyee !');
+      crossAlert('Succes', 'Demande d\'ami envoyee !');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible d\'envoyer la demande';
-      Alert.alert('Info', msg);
+      crossAlert('Info', msg);
     } finally {
       setSendingRequest(false);
     }

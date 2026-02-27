@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   ScrollView,
   RefreshControl,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
 import { onFriendRequest } from '../services/socket';
+import { crossAlert } from '../utils/alert';
 
 interface PendingRequest {
   id: string;
@@ -95,11 +95,11 @@ export default function NotificationsScreen() {
     try {
       await api.put(`/users/friend-requests/${friendId}/accept`);
       setRequests(prev => prev.filter(r => r.id !== friendId));
-      Alert.alert('Succes', 'Demande acceptee');
+      crossAlert('Succes', 'Demande acceptee');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible d\'accepter';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setBusyId(null);
     }
@@ -113,7 +113,7 @@ export default function NotificationsScreen() {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible de refuser';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setBusyId(null);
     }
@@ -124,11 +124,11 @@ export default function NotificationsScreen() {
     try {
       await api.post(`/events/${eventId}/accept`);
       setInvitations(prev => prev.filter(i => i.event.id !== eventId));
-      Alert.alert('Succes', 'Invitation acceptee');
+      crossAlert('Succes', 'Invitation acceptee');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible d\'accepter';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setBusyId(null);
     }
@@ -142,7 +142,7 @@ export default function NotificationsScreen() {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible de refuser';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setBusyId(null);
     }

@@ -8,7 +8,6 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   Keyboard,
   Modal,
 } from 'react-native';
@@ -18,6 +17,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
 import { getSocket, connectSocket } from '../services/socket';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Event'>;
@@ -80,7 +80,7 @@ export default function EventScreen({ route, navigation }: Props) {
   }, [eventId]);
 
   const handleDelete = useCallback(() => {
-    Alert.alert('Supprimer', 'Supprimer cet evenement ?', [
+    crossAlert('Supprimer', 'Supprimer cet evenement ?', [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Supprimer',
@@ -90,7 +90,7 @@ export default function EventScreen({ route, navigation }: Props) {
             await api.delete(`/events/${eventId}`);
             navigation.goBack();
           } catch {
-            Alert.alert('Erreur', 'Impossible de supprimer');
+            crossAlert('Erreur', 'Impossible de supprimer');
           }
         },
       },
@@ -104,7 +104,7 @@ export default function EventScreen({ route, navigation }: Props) {
       const { data } = await api.get('/users/me/friends');
       setFriends(data.data);
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger la liste d\'amis');
+      crossAlert('Erreur', 'Impossible de charger la liste d\'amis');
     } finally {
       setLoadingFriends(false);
     }
@@ -144,7 +144,7 @@ export default function EventScreen({ route, navigation }: Props) {
         api.post(`/events/${eventId}/join`).catch(() => {});
       }
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger l\'evenement');
+      crossAlert('Erreur', 'Impossible de charger l\'evenement');
     } finally {
       setLoading(false);
     }
@@ -167,12 +167,12 @@ export default function EventScreen({ route, navigation }: Props) {
     setInvitingId(friendId);
     try {
       await api.post(`/events/${eventId}/invite`, { userId: friendId });
-      Alert.alert('Succes', 'Invitation envoyee');
+      crossAlert('Succes', 'Invitation envoyee');
       setFriends(prev => prev.filter(f => f.id !== friendId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible d\'inviter';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setInvitingId(null);
     }
@@ -180,7 +180,7 @@ export default function EventScreen({ route, navigation }: Props) {
 
   const handleAddTrack = async () => {
     if (!title.trim() || !artist.trim()) {
-      Alert.alert('Erreur', 'Titre et artiste requis');
+      crossAlert('Erreur', 'Titre et artiste requis');
       return;
     }
 
@@ -196,7 +196,7 @@ export default function EventScreen({ route, navigation }: Props) {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible d\'ajouter la track';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setAdding(false);
     }
@@ -210,7 +210,7 @@ export default function EventScreen({ route, navigation }: Props) {
       if (event?.licenseType === 'LOCATION_TIME') {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Erreur', 'La localisation est requise pour voter dans cet evenement');
+          crossAlert('Erreur', 'La localisation est requise pour voter dans cet evenement');
           setVotingId(null);
           return;
         }
@@ -223,7 +223,7 @@ export default function EventScreen({ route, navigation }: Props) {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible de voter';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setVotingId(null);
     }

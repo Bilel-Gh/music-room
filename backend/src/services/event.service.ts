@@ -148,7 +148,7 @@ export async function joinEvent(eventId: string, userId: string) {
     throw Object.assign(new Error('Event not found'), { status: 404 });
   }
 
-  // Vérifier si déjà membre
+  // Check if already a member
   const existing = await prisma.eventMember.findUnique({
     where: { eventId_userId: { eventId, userId } },
   });
@@ -197,7 +197,7 @@ export async function addTrack(eventId: string, data: AddTrackInput, userId: str
     throw Object.assign(new Error('Event not found'), { status: 404 });
   }
 
-  // Pour INVITE_ONLY, il faut être membre
+  // For INVITE_ONLY, must be a member
   if (event.licenseType === 'INVITE_ONLY') {
     const member = await prisma.eventMember.findUnique({
       where: { eventId_userId: { eventId, userId } },

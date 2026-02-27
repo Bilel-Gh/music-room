@@ -6,7 +6,7 @@ const options: swaggerJsdoc.Options = {
     info: {
       title: 'Music Room API',
       version: '1.0.0',
-      description: 'API du projet Music Room — authentification, profils, votes, playlists',
+      description: 'Music Room API — authentication, profiles, votes, playlists',
     },
     servers: [
       { url: '/api', description: 'API' },

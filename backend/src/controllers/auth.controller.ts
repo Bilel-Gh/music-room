@@ -71,6 +71,16 @@ export async function linkGoogle(req: Request, res: Response, next: NextFunction
   }
 }
 
+export async function googleMobile(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { idToken } = req.body;
+    const result = await authService.googleMobileLogin(idToken);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export function googleCallback(req: Request, res: Response, next: NextFunction) {
   try {
     const user = req.user!;
@@ -81,8 +91,8 @@ export function googleCallback(req: Request, res: Response, next: NextFunction) 
     if (isMobile) {
       res.redirect(`musicroom://auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
     } else {
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-      res.redirect(`${clientUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:8081';
+      res.redirect(`${clientUrl}?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
     }
   } catch (err) {
     next(err);

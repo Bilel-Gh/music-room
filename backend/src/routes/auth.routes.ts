@@ -11,6 +11,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   linkGoogleSchema,
+  googleMobileSchema,
 } from '../schemas/auth.schema.js';
 import * as authController from '../controllers/auth.controller.js';
 
@@ -20,7 +21,7 @@ const router = Router();
  * @swagger
  * /auth/register:
  *   post:
- *     summary: Créer un compte
+ *     summary: Create an account
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -35,17 +36,17 @@ const router = Router();
  *                 example: jean@example.com
  *               password:
  *                 type: string
- *                 example: motdepasse123
+ *                 example: mypassword123
  *               name:
  *                 type: string
  *                 example: Jean Dupont
  *     responses:
  *       201:
- *         description: Compte créé
+ *         description: Account created
  *       400:
- *         description: Données invalides
+ *         description: Invalid data
  *       409:
- *         description: Email déjà utilisé
+ *         description: Email already in use
  */
 router.post('/register', authLimiter, validate(registerSchema), authController.register);
 
@@ -53,7 +54,7 @@ router.post('/register', authLimiter, validate(registerSchema), authController.r
  * @swagger
  * /auth/login:
  *   post:
- *     summary: Se connecter
+ *     summary: Log in
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -68,12 +69,12 @@ router.post('/register', authLimiter, validate(registerSchema), authController.r
  *                 example: jean@example.com
  *               password:
  *                 type: string
- *                 example: motdepasse123
+ *                 example: mypassword123
  *     responses:
  *       200:
- *         description: Connexion réussie
+ *         description: Login successful
  *       401:
- *         description: Identifiants invalides
+ *         description: Invalid credentials
  */
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
@@ -81,7 +82,7 @@ router.post('/login', authLimiter, validate(loginSchema), authController.login);
  * @swagger
  * /auth/refresh:
  *   post:
- *     summary: Renouveler les tokens
+ *     summary: Refresh tokens
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -95,9 +96,9 @@ router.post('/login', authLimiter, validate(loginSchema), authController.login);
  *                 type: string
  *     responses:
  *       200:
- *         description: Nouveaux tokens
+ *         description: New tokens
  *       401:
- *         description: Refresh token invalide
+ *         description: Invalid refresh token
  */
 router.post('/refresh', validate(refreshSchema), authController.refresh);
 
@@ -105,7 +106,7 @@ router.post('/refresh', validate(refreshSchema), authController.refresh);
  * @swagger
  * /auth/verify-email:
  *   post:
- *     summary: Vérifier son email avec le code à 6 chiffres
+ *     summary: Verify email with 6-digit code
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -123,11 +124,11 @@ router.post('/refresh', validate(refreshSchema), authController.refresh);
  *                 example: "482917"
  *     responses:
  *       200:
- *         description: Email vérifié
+ *         description: Email verified
  *       400:
- *         description: Code invalide ou expiré
+ *         description: Invalid or expired code
  *       404:
- *         description: Utilisateur non trouvé
+ *         description: User not found
  */
 router.post('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
 
@@ -135,7 +136,7 @@ router.post('/verify-email', validate(verifyEmailSchema), authController.verifyE
  * @swagger
  * /auth/forgot-password:
  *   post:
- *     summary: Demander un token de réinitialisation
+ *     summary: Request a password reset token
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -150,7 +151,7 @@ router.post('/verify-email', validate(verifyEmailSchema), authController.verifyE
  *                 example: jean@example.com
  *     responses:
  *       200:
- *         description: Demande acceptée (token dans les logs serveur)
+ *         description: Request accepted (token in server logs)
  */
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
 
@@ -158,7 +159,7 @@ router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), aut
  * @swagger
  * /auth/reset-password:
  *   post:
- *     summary: Réinitialiser le mot de passe
+ *     summary: Reset password
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -172,12 +173,12 @@ router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), aut
  *                 type: string
  *               password:
  *                 type: string
- *                 example: nouveaumotdepasse
+ *                 example: newpassword123
  *     responses:
  *       200:
- *         description: Mot de passe mis à jour
+ *         description: Password updated
  *       400:
- *         description: Token invalide ou expiré
+ *         description: Invalid or expired token
  */
 router.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);
 
@@ -185,7 +186,7 @@ router.post('/reset-password', validate(resetPasswordSchema), authController.res
  * @swagger
  * /auth/link-google:
  *   put:
- *     summary: Lier un compte Google (route protégée)
+ *     summary: Link a Google account (protected route)
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -202,11 +203,11 @@ router.post('/reset-password', validate(resetPasswordSchema), authController.res
  *                 example: "google-123456"
  *     responses:
  *       200:
- *         description: Google lié
+ *         description: Google account linked
  *       401:
- *         description: Non authentifié
+ *         description: Not authenticated
  *       409:
- *         description: Google déjà lié à un autre compte
+ *         description: Google account already linked to another user
  */
 router.put('/link-google', authenticate, validate(linkGoogleSchema), authController.linkGoogle);
 
@@ -214,11 +215,11 @@ router.put('/link-google', authenticate, validate(linkGoogleSchema), authControl
  * @swagger
  * /auth/google:
  *   get:
- *     summary: Connexion via Google (redirige vers Google)
+ *     summary: Google OAuth login (redirects to Google)
  *     tags: [Auth - OAuth]
  *     responses:
  *       302:
- *         description: Redirection vers Google
+ *         description: Redirect to Google
  */
 router.get('/google', (req, res, next) => {
   // Mobile clients pass ?platform=mobile — forward it as OAuth state
@@ -230,16 +231,40 @@ router.get('/google', (req, res, next) => {
  * @swagger
  * /auth/google/callback:
  *   get:
- *     summary: Callback Google OAuth
+ *     summary: Google OAuth callback
  *     tags: [Auth - OAuth]
  *     responses:
  *       302:
- *         description: Redirection vers le client avec tokens en query params
+ *         description: Redirect to client with tokens as query params
  */
 router.get(
   '/google/callback',
   passport.authenticate('google', { session: false, failureRedirect: '/api/auth/google' }),
   authController.googleCallback
 );
+
+/**
+ * @swagger
+ * /auth/google/mobile:
+ *   post:
+ *     summary: Google OAuth for mobile (verify ID token from expo-auth-session)
+ *     tags: [Auth - OAuth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [idToken]
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful, returns JWT tokens
+ *       401:
+ *         description: Invalid Google token
+ */
+router.post('/google/mobile', authLimiter, validate(googleMobileSchema), authController.googleMobile);
 
 export default router;

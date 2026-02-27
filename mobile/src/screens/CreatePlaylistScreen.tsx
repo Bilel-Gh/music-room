@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Switch,
@@ -14,6 +13,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreatePlaylist'>;
 
@@ -28,7 +28,7 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
 
   const handleCreate = async () => {
     if (!name.trim() || name.trim().length < 2) {
-      Alert.alert('Erreur', 'Le nom doit faire au moins 2 caracteres');
+      crossAlert('Erreur', 'Le nom doit faire au moins 2 caracteres');
       return;
     }
 
@@ -51,7 +51,7 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible de creer la playlist';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setCreating(false);
     }

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Switch,
@@ -17,6 +16,7 @@ import * as Location from 'expo-location';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateEvent'>;
 
@@ -41,9 +41,6 @@ export default function CreateEventScreen({ navigation }: Props) {
 
   const handleLicenseChange = (type: LicenseType) => {
     setLicenseType(type);
-    // Auto-link visibility to license type
-    if (type === 'OPEN') setIsPublic(true);
-    if (type === 'INVITE_ONLY') setIsPublic(false);
   };
 
   const formatDate = (d: Date) =>
@@ -54,7 +51,7 @@ export default function CreateEventScreen({ navigation }: Props) {
 
   const handleCreate = async () => {
     if (!name.trim() || name.trim().length < 2) {
-      Alert.alert('Erreur', 'Le nom doit faire au moins 2 caracteres');
+      crossAlert('Erreur', 'Le nom doit faire au moins 2 caracteres');
       return;
     }
 
@@ -74,24 +71,47 @@ export default function CreateEventScreen({ navigation }: Props) {
 
       if (licenseType === 'LOCATION_TIME') {
         if (!city.trim()) {
-          Alert.alert('Erreur', 'Veuillez saisir une ville');
+          crossAlert('Erreur', 'Veuillez saisir une ville');
           setCreating(false);
           return;
         }
 
         // Geocode the city to get coordinates
         setGeocoding(true);
-        const results = await Location.geocodeAsync(city.trim());
+        let lat: number | null = null;
+        let lon: number | null = null;
+
+        if (Platform.OS === 'web') {
+          // expo-location geocoding doesn't work on web, use Nominatim
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city.trim())}&format=json&limit=1`
+            );
+            const json = await res.json();
+            if (json.length > 0) {
+              lat = parseFloat(json[0].lat);
+              lon = parseFloat(json[0].lon);
+            }
+          } catch {
+            // fallback failed
+          }
+        } else {
+          const results = await Location.geocodeAsync(city.trim());
+          if (results.length > 0) {
+            lat = results[0].latitude;
+            lon = results[0].longitude;
+          }
+        }
         setGeocoding(false);
 
-        if (results.length === 0) {
-          Alert.alert('Erreur', `Impossible de trouver "${city.trim()}". Essayez avec un nom de ville plus precis.`);
+        if (lat === null || lon === null) {
+          crossAlert('Erreur', `Impossible de trouver "${city.trim()}". Essayez avec un nom de ville plus precis.`);
           setCreating(false);
           return;
         }
 
-        payload.latitude = results[0].latitude;
-        payload.longitude = results[0].longitude;
+        payload.latitude = lat;
+        payload.longitude = lon;
         payload.startTime = startDate.toISOString();
         payload.endTime = endDate.toISOString();
       }
@@ -101,7 +121,7 @@ export default function CreateEventScreen({ navigation }: Props) {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible de creer l\'evenement';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setCreating(false);
       setGeocoding(false);
@@ -169,28 +189,19 @@ export default function CreateEventScreen({ navigation }: Props) {
         {licenseType === 'LOCATION_TIME' && 'Les votes sont limites a une zone geographique et un creneau horaire'}
       </Text>
 
-      {/* Visibility toggle — only for LOCATION_TIME since OPEN=public, INVITE=private */}
-      {licenseType === 'LOCATION_TIME' && (
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Visible publiquement</Text>
-          <Switch
-            value={isPublic}
-            onValueChange={setIsPublic}
-            trackColor={{ true: '#4f46e5', false: '#ddd' }}
-          />
-        </View>
-      )}
-
-      {licenseType !== 'LOCATION_TIME' && (
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>
-            {licenseType === 'OPEN' ? 'Public (visible par tous)' : 'Prive (sur invitation)'}
-          </Text>
-          <View style={styles.lockedBadge}>
-            <Text style={styles.lockedBadgeText}>Auto</Text>
-          </View>
-        </View>
-      )}
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>Visible publiquement</Text>
+        <Switch
+          value={isPublic}
+          onValueChange={setIsPublic}
+          trackColor={{ true: '#4f46e5', false: '#ddd' }}
+        />
+      </View>
+      <Text style={styles.visibilityHint}>
+        {isPublic
+          ? 'Visible par tous dans la liste d\'accueil'
+          : 'Cache — seuls les invites peuvent y acceder'}
+      </Text>
 
       {licenseType === 'LOCATION_TIME' && (
         <View style={styles.locationSection}>
@@ -336,17 +347,6 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '500',
   },
-  lockedBadge: {
-    backgroundColor: '#e5e7eb',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  lockedBadgeText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
-  },
   licenseRow: {
     flexDirection: 'row',
     gap: 8,
@@ -379,6 +379,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 6,
+    fontStyle: 'italic',
+  },
+  visibilityHint: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
     fontStyle: 'italic',
   },
   locationSection: {

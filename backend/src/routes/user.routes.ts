@@ -6,22 +6,22 @@ import * as userController from '../controllers/user.controller.js';
 
 const router = Router();
 
-// Toutes les routes user sont protégées
+// All user routes are protected
 router.use(authenticate);
 
 /**
  * @swagger
  * /users/me:
  *   get:
- *     summary: Mon profil complet
+ *     summary: Get my full profile
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Profil de l'utilisateur connecté
+ *         description: Current user profile
  *       401:
- *         description: Non authentifié
+ *         description: Not authenticated
  */
 router.get('/me', userController.getMe);
 
@@ -29,7 +29,7 @@ router.get('/me', userController.getMe);
  * @swagger
  * /users/me:
  *   put:
- *     summary: Modifier mon profil
+ *     summary: Update my profile
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -44,13 +44,13 @@ router.get('/me', userController.getMe);
  *                 example: Jean Dupont
  *               publicInfo:
  *                 type: string
- *                 example: "Fan de jazz"
+ *                 example: "Jazz fan"
  *               friendsInfo:
  *                 type: string
- *                 example: "Dispo le samedi pour des concerts"
+ *                 example: "Available on Saturdays for concerts"
  *               privateInfo:
  *                 type: string
- *                 example: "Mon vrai nom est Jean-Pierre"
+ *                 example: "My real name is Jean-Pierre"
  *               musicPreferences:
  *                 type: array
  *                 items:
@@ -58,9 +58,9 @@ router.get('/me', userController.getMe);
  *                 example: ["jazz", "rock", "electro"]
  *     responses:
  *       200:
- *         description: Profil mis à jour
+ *         description: Profile updated
  *       401:
- *         description: Non authentifié
+ *         description: Not authenticated
  */
 router.put('/me', validate(updateProfileSchema), userController.updateMe);
 
@@ -68,13 +68,13 @@ router.put('/me', validate(updateProfileSchema), userController.updateMe);
  * @swagger
  * /users/me/friends:
  *   get:
- *     summary: Liste de mes amis
+ *     summary: List my friends
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste des amis acceptés
+ *         description: List of accepted friends
  */
 router.get('/me/friends', userController.getFriends);
 
@@ -127,13 +127,13 @@ router.get('/search', userController.searchUsers);
  * @swagger
  * /users/friend-requests/pending:
  *   get:
- *     summary: Demandes d'ami en attente
+ *     summary: Pending friend requests
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste des demandes en attente
+ *         description: List of pending requests
  */
 router.get('/friend-requests/pending', userController.getPendingRequests);
 
@@ -141,7 +141,7 @@ router.get('/friend-requests/pending', userController.getPendingRequests);
  * @swagger
  * /users/friend-requests/{friendId}:
  *   post:
- *     summary: Envoyer une demande d'ami
+ *     summary: Send a friend request
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -153,13 +153,13 @@ router.get('/friend-requests/pending', userController.getPendingRequests);
  *           type: string
  *     responses:
  *       201:
- *         description: Demande envoyée
+ *         description: Request sent
  *       400:
- *         description: Impossible de s'ajouter soi-même
+ *         description: Cannot add yourself
  *       404:
- *         description: Utilisateur non trouvé
+ *         description: User not found
  *       409:
- *         description: Demande déjà existante
+ *         description: Request already exists
  */
 router.post('/friend-requests/:friendId', userController.sendFriendRequest);
 
@@ -167,7 +167,7 @@ router.post('/friend-requests/:friendId', userController.sendFriendRequest);
  * @swagger
  * /users/friend-requests/{friendId}/accept:
  *   put:
- *     summary: Accepter une demande d'ami
+ *     summary: Accept a friend request
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -179,9 +179,9 @@ router.post('/friend-requests/:friendId', userController.sendFriendRequest);
  *           type: string
  *     responses:
  *       200:
- *         description: Demande acceptée
+ *         description: Request accepted
  *       404:
- *         description: Aucune demande en attente
+ *         description: No pending request
  */
 router.put('/friend-requests/:friendId/accept', userController.acceptFriendRequest);
 
@@ -211,7 +211,7 @@ router.delete('/friend-requests/:friendId/reject', userController.rejectFriendRe
  * @swagger
  * /users/{id}:
  *   get:
- *     summary: Voir le profil d'un utilisateur (visibilité selon relation)
+ *     summary: View a user profile (visibility based on relationship)
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -223,9 +223,9 @@ router.delete('/friend-requests/:friendId/reject', userController.rejectFriendRe
  *           type: string
  *     responses:
  *       200:
- *         description: Profil (champs visibles selon la relation)
+ *         description: Profile (visible fields depend on relationship)
  *       404:
- *         description: Utilisateur non trouvé
+ *         description: User not found
  */
 router.get('/:id', userController.getUserProfile);
 

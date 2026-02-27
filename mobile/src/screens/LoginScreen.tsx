@@ -1,20 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
+
+WebBrowser.maybeCompleteAuthSession();
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -26,7 +29,7 @@ export default function LoginScreen({ navigation }: Props) {
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      crossAlert('Error', 'Please fill in all fields');
       return;
     }
 
@@ -37,33 +40,45 @@ export default function LoginScreen({ navigation }: Props) {
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { error?: string } } }).response?.data?.error ||
-        'Impossible de se connecter';
-      Alert.alert('Erreur', message);
+        'Unable to log in';
+      crossAlert('Error', message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
-      const result = await WebBrowser.openAuthSessionAsync(
-        `${apiUrl}/api/auth/google?platform=mobile`,
-        'musicroom://auth/callback',
-      );
+  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  });
 
-      if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        const accessToken = url.searchParams.get('accessToken');
-        const refreshToken = url.searchParams.get('refreshToken');
-        if (accessToken && refreshToken) {
-          await setTokens(accessToken, refreshToken);
-        } else {
-          Alert.alert('Erreur', 'Tokens manquants dans la reponse Google');
-        }
-      }
-    } catch {
-      Alert.alert('Erreur', 'Impossible de se connecter avec Google');
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const idToken = googleResponse.params.id_token;
+      handleGoogleToken(idToken);
+    }
+  }, [googleResponse]);
+
+  const handleGoogleToken = async (idToken: string) => {
+    setLoading(true);
+    try {
+      const { data } = await api.post('/auth/google/mobile', { idToken });
+      await setTokens(data.data.accessToken, data.data.refreshToken);
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { error?: string } } }).response?.data?.error ||
+        'Unable to log in with Google';
+      crossAlert('Error', message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    if (Platform.OS === 'web') {
+      const apiUrl = process.env.EXPO_PUBLIC_WEB_API_URL || 'http://localhost:3001';
+      window.location.href = `${apiUrl}/api/auth/google`;
+    } else {
+      promptGoogleAsync();
     }
   };
 
@@ -74,7 +89,7 @@ export default function LoginScreen({ navigation }: Props) {
     >
       <View style={styles.inner}>
         <Text style={styles.title}>Music Room</Text>
-        <Text style={styles.subtitle}>Connectez-vous</Text>
+        <Text style={styles.subtitle}>Sign in</Text>
 
         <TextInput
           style={styles.input}
@@ -88,7 +103,7 @@ export default function LoginScreen({ navigation }: Props) {
 
         <TextInput
           style={styles.input}
-          placeholder="Mot de passe"
+          placeholder="Password"
           placeholderTextColor="#999"
           value={password}
           onChangeText={setPassword}
@@ -103,21 +118,25 @@ export default function LoginScreen({ navigation }: Props) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Se connecter</Text>
+            <Text style={styles.buttonText}>Log in</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-          <Text style={styles.forgotText}>Mot de passe oublie ?</Text>
+          <Text style={styles.forgotText}>Forgot password?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
-          <Text style={styles.googleButtonText}>Continuer avec Google</Text>
+        <TouchableOpacity
+          style={[styles.googleButton, Platform.OS !== 'web' && !googleRequest && styles.buttonDisabled]}
+          onPress={handleGoogleLogin}
+          disabled={Platform.OS !== 'web' && !googleRequest}
+        >
+          <Text style={styles.googleButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Register')}>
           <Text style={styles.linkText}>
-            Pas encore de compte ? <Text style={styles.linkBold}>S'inscrire</Text>
+            Don't have an account? <Text style={styles.linkBold}>Sign up</Text>
           </Text>
         </TouchableOpacity>
       </View>

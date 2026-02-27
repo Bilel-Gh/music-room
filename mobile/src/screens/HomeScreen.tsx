@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Alert,
-  Animated,
-  PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert } from '../utils/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -45,60 +43,6 @@ interface Playlist {
 }
 
 type FeedMode = 'public' | 'mine';
-
-function SwipeableCard({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
-  const translateX = useRef(new Animated.Value(0)).current;
-  const openRef = useRef(false);
-  const gestureStartX = useRef(0);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) => {
-        // Only capture horizontal swipes, ignore vertical scrolling
-        return Math.abs(gesture.dx) > 15 && Math.abs(gesture.dy) < 10;
-      },
-      onPanResponderGrant: () => {
-        gestureStartX.current = openRef.current ? -80 : 0;
-      },
-      onPanResponderMove: (_, gesture) => {
-        const val = Math.min(0, Math.max(-80, gestureStartX.current + gesture.dx));
-        translateX.setValue(val);
-      },
-      onPanResponderRelease: (_, gesture) => {
-        const destination = gestureStartX.current + gesture.dx;
-        if (destination < -40) {
-          openRef.current = true;
-          Animated.spring(translateX, { toValue: -80, useNativeDriver: true, speed: 20, bounciness: 4 }).start();
-        } else {
-          openRef.current = false;
-          Animated.spring(translateX, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 4 }).start();
-        }
-      },
-    })
-  ).current;
-
-  return (
-    <View style={styles.swipeContainer}>
-      <TouchableOpacity
-        style={styles.deleteBackground}
-        onPress={() => {
-          openRef.current = false;
-          Animated.timing(translateX, { toValue: 0, duration: 150, useNativeDriver: true }).start();
-          onDelete();
-        }}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="trash-outline" size={22} color="#fff" />
-      </TouchableOpacity>
-      <Animated.View
-        style={{ transform: [{ translateX }], backgroundColor: '#f5f5f5' }}
-        {...panResponder.panHandlers}
-      >
-        {children}
-      </Animated.View>
-    </View>
-  );
-}
 
 export default function HomeScreen() {
   const navigation = useNavigation<HomeNavProp>();
@@ -175,7 +119,7 @@ export default function HomeScreen() {
   };
 
   const handleDeleteEvent = (eventId: string, name: string) => {
-    Alert.alert('Supprimer', `Supprimer "${name}" ?`, [
+    crossAlert('Supprimer', `Supprimer "${name}" ?`, [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Supprimer',
@@ -187,7 +131,7 @@ export default function HomeScreen() {
           } catch (err: unknown) {
             const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
               || 'Impossible de supprimer';
-            Alert.alert('Erreur', msg);
+            crossAlert('Erreur', msg);
           }
         },
       },
@@ -195,7 +139,7 @@ export default function HomeScreen() {
   };
 
   const handleDeletePlaylist = (playlistId: string, name: string) => {
-    Alert.alert('Supprimer', `Supprimer "${name}" ?`, [
+    crossAlert('Supprimer', `Supprimer "${name}" ?`, [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Supprimer',
@@ -207,7 +151,7 @@ export default function HomeScreen() {
           } catch (err: unknown) {
             const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
               || 'Impossible de supprimer';
-            Alert.alert('Erreur', msg);
+            crossAlert('Erreur', msg);
           }
         },
       },
@@ -216,28 +160,6 @@ export default function HomeScreen() {
 
   const renderEventItem = ({ item }: { item: Event }) => {
     const isOwner = feedMode === 'mine' && item.creatorId === userId;
-
-    if (isOwner) {
-      return (
-        <SwipeableCard onDelete={() => handleDeleteEvent(item.id, item.name)}>
-          <TouchableOpacity
-            style={[styles.card, { marginBottom: 0 }]}
-            onPress={() => navigation.navigate('Event', { eventId: item.id })}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
-              <View style={[styles.badge, item.licenseType === 'OPEN' ? styles.badgeOpen : styles.badgeInvite]}>
-                <Text style={styles.badgeText}>{item.licenseType}</Text>
-              </View>
-            </View>
-            {item.description ? (
-              <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
-            ) : null}
-          </TouchableOpacity>
-        </SwipeableCard>
-      );
-    }
 
     return (
       <TouchableOpacity
@@ -249,6 +171,15 @@ export default function HomeScreen() {
           <View style={[styles.badge, item.licenseType === 'OPEN' ? styles.badgeOpen : styles.badgeInvite]}>
             <Text style={styles.badgeText}>{item.licenseType}</Text>
           </View>
+          {isOwner && (
+            <TouchableOpacity
+              onPress={() => handleDeleteEvent(item.id, item.name)}
+              style={styles.deleteBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle-outline" size={22} color="#ef4444" />
+            </TouchableOpacity>
+          )}
         </View>
         {item.description ? (
           <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
@@ -260,28 +191,6 @@ export default function HomeScreen() {
   const renderPlaylistItem = ({ item }: { item: Playlist }) => {
     const isOwner = feedMode === 'mine' && item.creatorId === userId;
 
-    if (isOwner) {
-      return (
-        <SwipeableCard onDelete={() => handleDeletePlaylist(item.id, item.name)}>
-          <TouchableOpacity
-            style={[styles.card, { marginBottom: 0 }]}
-            onPress={() => navigation.navigate('Playlist', { playlistId: item.id })}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
-              <View style={[styles.badge, item.licenseType === 'OPEN' ? styles.badgeOpen : styles.badgeInvite]}>
-                <Text style={styles.badgeText}>{item.licenseType}</Text>
-              </View>
-            </View>
-            {item.description ? (
-              <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
-            ) : null}
-          </TouchableOpacity>
-        </SwipeableCard>
-      );
-    }
-
     return (
       <TouchableOpacity
         style={styles.card}
@@ -292,6 +201,15 @@ export default function HomeScreen() {
           <View style={[styles.badge, item.licenseType === 'OPEN' ? styles.badgeOpen : styles.badgeInvite]}>
             <Text style={styles.badgeText}>{item.licenseType}</Text>
           </View>
+          {isOwner && (
+            <TouchableOpacity
+              onPress={() => handleDeletePlaylist(item.id, item.name)}
+              style={styles.deleteBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle-outline" size={22} color="#ef4444" />
+            </TouchableOpacity>
+          )}
         </View>
         {item.description ? (
           <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
@@ -513,21 +431,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  swipeContainer: {
-    marginBottom: 12,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  deleteBackground: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 80,
-    backgroundColor: '#ef4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
+  deleteBtn: {
+    padding: 4,
+    marginLeft: 6,
   },
 });

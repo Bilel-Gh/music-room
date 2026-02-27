@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +12,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
 
@@ -23,7 +23,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
   const handleSend = async () => {
     if (!email.trim()) {
-      Alert.alert('Erreur', 'Veuillez entrer votre email');
+      crossAlert('Error', 'Please enter your email');
       return;
     }
 
@@ -33,8 +33,8 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       setSent(true);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'envoyer le lien';
-      Alert.alert('Erreur', msg);
+        || 'Unable to send the link';
+      crossAlert('Error', msg);
     } finally {
       setLoading(false);
     }
@@ -44,19 +44,19 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     return (
       <View style={styles.container}>
         <View style={styles.inner}>
-          <Text style={styles.title}>Email envoye</Text>
+          <Text style={styles.title}>Email sent</Text>
           <Text style={styles.info}>
-            Si un compte existe avec cet email, un token de reinitialisation a ete genere.
-            Consultez les logs du serveur pour le recuperer.
+            If an account exists with this email, a reset token has been generated.{'\n'}
+            Check the server logs to retrieve it.
           </Text>
           <TouchableOpacity
             style={styles.button}
             onPress={() => navigation.navigate('ResetPassword')}
           >
-            <Text style={styles.buttonText}>Entrer le token</Text>
+            <Text style={styles.buttonText}>Enter token</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.linkText}>Retour a la connexion</Text>
+            <Text style={styles.linkText}>Back to login</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -69,9 +69,9 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.inner}>
-        <Text style={styles.title}>Mot de passe oublie</Text>
+        <Text style={styles.title}>Forgot password</Text>
         <Text style={styles.subtitle}>
-          Entrez votre email pour recevoir un token de reinitialisation
+          Enter your email to receive a reset token
         </Text>
 
         <TextInput
@@ -92,12 +92,12 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Envoyer</Text>
+            <Text style={styles.buttonText}>Send</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.linkText}>Retour a la connexion</Text>
+          <Text style={styles.linkText}>Back to login</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

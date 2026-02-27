@@ -31,7 +31,7 @@ export async function register(data: RegisterInput) {
 
   const hashedPassword = await bcrypt.hash(data.password, 10);
 
-  // Générer un code de vérification à 6 chiffres
+  // Generate a 6-digit verification code
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   const verificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
@@ -124,7 +124,7 @@ export async function verifyEmail(email: string, code: string) {
 
 export async function forgotPassword(email: string) {
   const user = await prisma.user.findUnique({ where: { email } });
-  // On ne révèle pas si l'email existe ou non
+  // Don't reveal whether the email exists
   if (!user) return { message: 'If this email exists, a reset link has been sent' };
 
   const resetToken = crypto.randomBytes(32).toString('hex');
@@ -182,4 +182,57 @@ export async function linkGoogle(userId: string, googleId: string) {
 
 export function generateTokensForUser(user: { id: string; email: string }) {
   return generateTokens(user);
+}
+
+interface GoogleTokenInfo {
+  sub: string;
+  email: string;
+  email_verified: string;
+  name?: string;
+  aud: string;
+}
+
+export async function googleMobileLogin(idToken: string) {
+  const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+  if (!res.ok) {
+    throw Object.assign(new Error('Invalid Google token'), { status: 401 });
+  }
+
+  const payload: GoogleTokenInfo = await res.json();
+
+  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+  if (payload.aud !== GOOGLE_CLIENT_ID) {
+    throw Object.assign(new Error('Token audience mismatch'), { status: 401 });
+  }
+
+  if (payload.email_verified !== 'true') {
+    throw Object.assign(new Error('Google email not verified'), { status: 401 });
+  }
+
+  const { email, sub: googleId } = payload;
+
+  let user = await prisma.user.findFirst({
+    where: { OR: [{ googleId }, { email }] },
+  });
+
+  if (user && !user.googleId) {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { googleId, emailVerified: true },
+    });
+  } else if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email,
+        name: payload.name || email.split('@')[0],
+        googleId,
+        emailVerified: true,
+      },
+    });
+  }
+
+  return {
+    user: { id: user!.id, email: user!.email, name: user!.name },
+    ...generateTokens({ id: user!.id, email: user!.email }),
+  };
 }

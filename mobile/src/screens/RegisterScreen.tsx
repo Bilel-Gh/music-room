@@ -1,20 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
+
+WebBrowser.maybeCompleteAuthSession();
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -27,11 +30,11 @@ export default function RegisterScreen({ navigation }: Props) {
 
   const handleRegister = async () => {
     if (!name.trim() || !email.trim() || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      crossAlert('Error', 'Please fill in all fields');
       return;
     }
     if (password.length < 8) {
-      Alert.alert('Erreur', 'Le mot de passe doit faire au moins 8 caracteres');
+      crossAlert('Error', 'Password must be at least 8 characters');
       return;
     }
 
@@ -56,33 +59,45 @@ export default function RegisterScreen({ navigation }: Props) {
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { error?: string } } }).response?.data?.error ||
-        'Impossible de creer le compte';
-      Alert.alert('Erreur', message);
+        'Unable to create account';
+      crossAlert('Error', message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleRegister = async () => {
-    try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
-      const result = await WebBrowser.openAuthSessionAsync(
-        `${apiUrl}/api/auth/google?platform=mobile`,
-        'musicroom://auth/callback',
-      );
+  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  });
 
-      if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        const accessToken = url.searchParams.get('accessToken');
-        const refreshToken = url.searchParams.get('refreshToken');
-        if (accessToken && refreshToken) {
-          await setTokens(accessToken, refreshToken);
-        } else {
-          Alert.alert('Erreur', 'Tokens manquants dans la reponse Google');
-        }
-      }
-    } catch {
-      Alert.alert('Erreur', 'Impossible de se connecter avec Google');
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const idToken = googleResponse.params.id_token;
+      handleGoogleToken(idToken);
+    }
+  }, [googleResponse]);
+
+  const handleGoogleToken = async (idToken: string) => {
+    setLoading(true);
+    try {
+      const { data } = await api.post('/auth/google/mobile', { idToken });
+      await setTokens(data.data.accessToken, data.data.refreshToken);
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { error?: string } } }).response?.data?.error ||
+        'Unable to sign in with Google';
+      crossAlert('Error', message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleRegister = () => {
+    if (Platform.OS === 'web') {
+      const apiUrl = process.env.EXPO_PUBLIC_WEB_API_URL || 'http://localhost:3001';
+      window.location.href = `${apiUrl}/api/auth/google`;
+    } else {
+      promptGoogleAsync();
     }
   };
 
@@ -92,12 +107,12 @@ export default function RegisterScreen({ navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.inner}>
-        <Text style={styles.title}>Creer un compte</Text>
-        <Text style={styles.subtitle}>Rejoignez Music Room</Text>
+        <Text style={styles.title}>Create an account</Text>
+        <Text style={styles.subtitle}>Join Music Room</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Nom"
+          placeholder="Name"
           placeholderTextColor="#999"
           value={name}
           onChangeText={setName}
@@ -115,7 +130,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <TextInput
           style={styles.input}
-          placeholder="Mot de passe (8 caracteres min)"
+          placeholder="Password (8 characters min)"
           placeholderTextColor="#999"
           value={password}
           onChangeText={setPassword}
@@ -130,17 +145,21 @@ export default function RegisterScreen({ navigation }: Props) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>S'inscrire</Text>
+            <Text style={styles.buttonText}>Sign up</Text>
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleRegister}>
-          <Text style={styles.googleButtonText}>Continuer avec Google</Text>
+        <TouchableOpacity
+          style={[styles.googleButton, Platform.OS !== 'web' && !googleRequest && styles.buttonDisabled]}
+          onPress={handleGoogleRegister}
+          disabled={Platform.OS !== 'web' && !googleRequest}
+        >
+          <Text style={styles.googleButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.linkText}>
-            Deja un compte ? <Text style={styles.linkBold}>Se connecter</Text>
+            Already have an account? <Text style={styles.linkBold}>Log in</Text>
           </Text>
         </TouchableOpacity>
       </View>

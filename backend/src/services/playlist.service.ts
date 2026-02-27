@@ -6,17 +6,17 @@ import type {
   InviteUserInput,
 } from '../schemas/playlist.schema.js';
 
-// Vérifie si l'utilisateur peut voir la playlist
+// Check if the user can view the playlist
 async function assertCanView(playlistId: string, userId: string) {
   const playlist = await prisma.playlist.findUnique({ where: { id: playlistId } });
   if (!playlist) {
     throw Object.assign(new Error('Playlist not found'), { status: 404 });
   }
 
-  // Publique → tout le monde peut voir
+  // Public → everyone can view
   if (playlist.isPublic) return playlist;
 
-  // Privée → seulement les membres
+  // Private → members only
   const member = await prisma.playlistMember.findUnique({
     where: { playlistId_userId: { playlistId, userId } },
   });
@@ -27,17 +27,17 @@ async function assertCanView(playlistId: string, userId: string) {
   return playlist;
 }
 
-// Vérifie si l'utilisateur peut modifier la playlist (ajouter/supprimer/réordonner)
+// Check if the user can edit the playlist (add/remove/reorder)
 async function assertCanEdit(playlistId: string, userId: string) {
   const playlist = await prisma.playlist.findUnique({ where: { id: playlistId } });
   if (!playlist) {
     throw Object.assign(new Error('Playlist not found'), { status: 404 });
   }
 
-  // OPEN → tout le monde peut éditer
+  // OPEN → everyone can edit
   if (playlist.licenseType === 'OPEN') return playlist;
 
-  // INVITE_ONLY → il faut être membre avec canEdit = true
+  // INVITE_ONLY → must be a member with canEdit = true
   const member = await prisma.playlistMember.findUnique({
     where: { playlistId_userId: { playlistId, userId } },
   });
@@ -135,7 +135,7 @@ export async function deletePlaylist(playlistId: string, userId: string) {
 export async function addTrack(playlistId: string, data: AddPlaylistTrackInput, userId: string) {
   await assertCanEdit(playlistId, userId);
 
-  // Trouver la position max actuelle dans une transaction
+  // Find the current max position in a transaction
   return prisma.$transaction(async (tx) => {
     const lastTrack = await tx.playlistTrack.findFirst({
       where: { playlistId },
@@ -165,7 +165,7 @@ export async function removeTrack(playlistId: string, trackId: string, userId: s
 
     await tx.playlistTrack.delete({ where: { id: trackId } });
 
-    // Décaler toutes les tracks après celle supprimée
+    // Shift all tracks after the deleted one
     await tx.playlistTrack.updateMany({
       where: { playlistId, position: { gt: track.position } },
       data: { position: { decrement: 1 } },
@@ -194,7 +194,7 @@ export async function reorderTrack(
     const clampedNew = Math.min(newPosition, trackCount - 1);
 
     if (oldPosition < clampedNew) {
-      // Déplacement vers le bas : décaler les tracks entre [old+1, new] vers le haut
+      // Moving down: shift tracks between [old+1, new] up
       await tx.playlistTrack.updateMany({
         where: {
           playlistId,
@@ -203,7 +203,7 @@ export async function reorderTrack(
         data: { position: { decrement: 1 } },
       });
     } else {
-      // Déplacement vers le haut : décaler les tracks entre [new, old-1] vers le bas
+      // Moving up: shift tracks between [new, old-1] down
       await tx.playlistTrack.updateMany({
         where: {
           playlistId,

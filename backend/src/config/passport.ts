@@ -21,13 +21,13 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
             return done(new Error('No email found in Google profile'));
           }
 
-          // Chercher par googleId ou par email
+          // Find by googleId or email
           let user = await prisma.user.findFirst({
             where: { OR: [{ googleId: profile.id }, { email }] },
           });
 
           if (user && !user.googleId) {
-            // L'utilisateur existe par email mais sans Google lié
+            // User exists by email but without linked Google
             user = await prisma.user.update({
               where: { id: user.id },
               data: { googleId: profile.id, emailVerified: true },
@@ -43,7 +43,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
             });
           }
 
-          // Passport attend Express.User, on passe les champs nécessaires
+          // Passport expects Express.User, pass the required fields
           done(null, { userId: user.id, email: user.email, id: user.id });
         } catch (err) {
           done(err as Error);

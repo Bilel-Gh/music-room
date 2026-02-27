@@ -5,17 +5,21 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
+
+WebBrowser.maybeCompleteAuthSession();
 
 interface UserProfile {
   name: string;
@@ -65,7 +69,7 @@ export default function ProfileScreen() {
       setProfile(user);
       populateFields(user);
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger le profil');
+      crossAlert('Error', 'Unable to load profile');
     } finally {
       setLoading(false);
     }
@@ -91,7 +95,7 @@ export default function ProfileScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Erreur', 'Le nom ne peut pas etre vide');
+      crossAlert('Error', 'Name cannot be empty');
       return;
     }
 
@@ -111,37 +115,47 @@ export default function ProfileScreen() {
       });
       setProfile(data.data as UserProfile);
       setIsEditing(false);
-      Alert.alert('Succes', 'Profil mis a jour');
+      crossAlert('Success', 'Profile updated');
     } catch {
-      Alert.alert('Erreur', 'Impossible de mettre a jour le profil');
+      crossAlert('Error', 'Unable to update profile');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleLinkGoogle = async () => {
-    try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
-      const result = await WebBrowser.openAuthSessionAsync(
-        `${apiUrl}/api/auth/google?platform=mobile`,
-        'musicroom://auth/callback',
-      );
+  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  });
 
-      if (result.type === 'success' && result.url) {
-        // Google OAuth succeeded — the backend already linked the account
-        // Refresh profile to reflect the change
-        await fetchProfile();
-        Alert.alert('Succes', 'Compte Google lie');
-      }
-    } catch {
-      Alert.alert('Erreur', 'Impossible de lier le compte Google');
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const idToken = googleResponse.params.id_token;
+      (async () => {
+        try {
+          // Use the mobile endpoint to verify token and link Google
+          await api.post('/auth/google/mobile', { idToken });
+          await fetchProfile();
+          crossAlert('Success', 'Google account linked');
+        } catch {
+          crossAlert('Error', 'Unable to link Google account');
+        }
+      })();
+    }
+  }, [googleResponse]);
+
+  const handleLinkGoogle = () => {
+    if (Platform.OS === 'web') {
+      const apiUrl = process.env.EXPO_PUBLIC_WEB_API_URL || 'http://localhost:3001';
+      window.location.href = `${apiUrl}/api/auth/google`;
+    } else {
+      promptGoogleAsync();
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('Deconnexion', 'Voulez-vous vous deconnecter ?', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Deconnexion', style: 'destructive', onPress: () => logout() },
+    crossAlert('Log out', 'Do you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Log out', style: 'destructive', onPress: () => logout() },
     ]);
   };
 
@@ -176,7 +190,7 @@ export default function ProfileScreen() {
               onPress={() => email && navigation.navigate('EmailVerification', { email })}
             >
               <Text style={styles.verifyBannerText}>
-                Email non verifie — Appuyez pour verifier
+                Email not verified — Tap to verify
               </Text>
             </TouchableOpacity>
           )}
@@ -184,28 +198,28 @@ export default function ProfileScreen() {
           {/* Info cards */}
           {profile.publicInfo ? (
             <View style={styles.card}>
-              <Text style={styles.cardLabel}>Info publique</Text>
+              <Text style={styles.cardLabel}>Public info</Text>
               <Text style={styles.cardValue}>{profile.publicInfo}</Text>
             </View>
           ) : null}
 
           {profile.friendsInfo ? (
             <View style={styles.card}>
-              <Text style={styles.cardLabel}>Info amis</Text>
+              <Text style={styles.cardLabel}>Friends info</Text>
               <Text style={styles.cardValue}>{profile.friendsInfo}</Text>
             </View>
           ) : null}
 
           {profile.privateInfo ? (
             <View style={styles.card}>
-              <Text style={styles.cardLabel}>Info privee</Text>
+              <Text style={styles.cardLabel}>Private info</Text>
               <Text style={styles.cardValue}>{profile.privateInfo}</Text>
             </View>
           ) : null}
 
           {profile.musicPreferences.length > 0 ? (
             <View style={styles.card}>
-              <Text style={styles.cardLabel}>Preferences musicales</Text>
+              <Text style={styles.cardLabel}>Music preferences</Text>
               <View style={styles.tagsRow}>
                 {profile.musicPreferences.map((pref, i) => (
                   <View key={i} style={styles.tag}>
@@ -217,23 +231,27 @@ export default function ProfileScreen() {
           ) : null}
 
           <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-            <Text style={styles.editButtonText}>Modifier le profil</Text>
+            <Text style={styles.editButtonText}>Edit profile</Text>
           </TouchableOpacity>
 
           {!profile.googleId && (
-            <TouchableOpacity style={styles.googleLinkButton} onPress={handleLinkGoogle}>
-              <Text style={styles.googleLinkText}>Lier un compte Google</Text>
+            <TouchableOpacity
+              style={[styles.googleLinkButton, Platform.OS !== 'web' && !googleRequest && { opacity: 0.5 }]}
+              onPress={handleLinkGoogle}
+              disabled={Platform.OS !== 'web' && !googleRequest}
+            >
+              <Text style={styles.googleLinkText}>Link Google account</Text>
             </TouchableOpacity>
           )}
 
           {profile.googleId && (
             <View style={styles.googleLinkedBadge}>
-              <Text style={styles.googleLinkedText}>Compte Google lie</Text>
+              <Text style={styles.googleLinkedText}>Google account linked</Text>
             </View>
           )}
 
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Se deconnecter</Text>
+            <Text style={styles.logoutText}>Log out</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -246,44 +264,44 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.email}>{profile.email}</Text>
 
-        <Text style={styles.label}>Nom</Text>
+        <Text style={styles.label}>Name</Text>
         <TextInput style={styles.input} value={name} onChangeText={setName} />
 
-        <Text style={styles.label}>Info publique</Text>
-        <Text style={styles.visibilityHint}>Visible par tous les utilisateurs</Text>
+        <Text style={styles.label}>Public info</Text>
+        <Text style={styles.visibilityHint}>Visible to all users</Text>
         <TextInput
           style={[styles.input, styles.multiline]}
           value={publicInfo}
           onChangeText={setPublicInfo}
-          placeholder="Bio, centre d'interets..."
+          placeholder="Bio, interests..."
           placeholderTextColor="#bbb"
           multiline
         />
 
-        <Text style={styles.label}>Info amis uniquement</Text>
-        <Text style={styles.visibilityHint}>Visible par vos amis uniquement</Text>
+        <Text style={styles.label}>Friends only info</Text>
+        <Text style={styles.visibilityHint}>Visible to your friends only</Text>
         <TextInput
           style={[styles.input, styles.multiline]}
           value={friendsInfo}
           onChangeText={setFriendsInfo}
-          placeholder="Infos reservees a vos amis..."
+          placeholder="Info reserved for friends..."
           placeholderTextColor="#bbb"
           multiline
         />
 
-        <Text style={styles.label}>Info privee</Text>
-        <Text style={styles.visibilityHint}>Visible par vous uniquement</Text>
+        <Text style={styles.label}>Private info</Text>
+        <Text style={styles.visibilityHint}>Visible to you only</Text>
         <TextInput
           style={[styles.input, styles.multiline]}
           value={privateInfo}
           onChangeText={setPrivateInfo}
-          placeholder="Notes personnelles..."
+          placeholder="Personal notes..."
           placeholderTextColor="#bbb"
           multiline
         />
 
-        <Text style={styles.label}>Preferences musicales</Text>
-        <Text style={styles.visibilityHint}>Visible par tous — Separez par des virgules (ex: Rock, Jazz, Hip-hop)</Text>
+        <Text style={styles.label}>Music preferences</Text>
+        <Text style={styles.visibilityHint}>Visible to all — Separate with commas (e.g. Rock, Jazz, Hip-hop)</Text>
         <TextInput
           style={styles.input}
           value={musicPrefs}
@@ -294,7 +312,7 @@ export default function ProfileScreen() {
 
         <View style={styles.editActions}>
           <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel}>
-            <Text style={styles.cancelBtnText}>Annuler</Text>
+            <Text style={styles.cancelBtnText}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.saveButton, saving && styles.buttonDisabled]}
@@ -304,7 +322,7 @@ export default function ProfileScreen() {
             {saving ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveButtonText}>Enregistrer</Text>
+              <Text style={styles.saveButtonText}>Save</Text>
             )}
           </TouchableOpacity>
         </View>

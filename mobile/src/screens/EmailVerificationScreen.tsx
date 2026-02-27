@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +12,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EmailVerification'>;
 
@@ -23,20 +23,20 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
 
   const handleVerify = async () => {
     if (code.length !== 6) {
-      Alert.alert('Erreur', 'Le code doit contenir 6 chiffres');
+      crossAlert('Erreur', 'Le code doit contenir 6 chiffres');
       return;
     }
 
     setLoading(true);
     try {
       await api.post('/auth/verify-email', { email, code });
-      Alert.alert('Succes', 'Email verifie !', [
+      crossAlert('Succes', 'Email verifie !', [
         { text: 'OK', onPress: () => navigation.navigate('MainTabs') },
       ]);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Code invalide';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setLoading(false);
     }

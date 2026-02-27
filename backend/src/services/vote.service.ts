@@ -1,6 +1,6 @@
 import prisma from '../lib/prisma.js';
 
-// Distance en km entre deux points (formule de Haversine simplifiée)
+// Distance in km between two points (simplified Haversine formula)
 function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -31,7 +31,7 @@ export async function voteForTrack(
 
   const event = track.event;
 
-  // Vérification selon le type de licence
+  // Check based on license type
   if (event.licenseType === 'INVITE_ONLY') {
     const member = await prisma.eventMember.findUnique({
       where: { eventId_userId: { eventId: event.id, userId } },
@@ -42,7 +42,7 @@ export async function voteForTrack(
   }
 
   if (event.licenseType === 'LOCATION_TIME') {
-    // Vérification du créneau horaire
+    // Time slot check
     const now = new Date();
     if (event.startTime && now < event.startTime) {
       throw Object.assign(new Error('Event has not started yet'), { status: 403 });
@@ -51,7 +51,7 @@ export async function voteForTrack(
       throw Object.assign(new Error('Event has ended'), { status: 403 });
     }
 
-    // Vérification de la localisation
+    // Location check
     if (event.latitude != null && event.longitude != null) {
       if (userLat == null || userLon == null) {
         throw Object.assign(new Error('Location required for this event'), { status: 400 });
@@ -63,7 +63,7 @@ export async function voteForTrack(
     }
   }
 
-  // Transaction pour éviter les race conditions sur le vote
+  // Transaction to avoid race conditions on vote
   const result = await prisma.$transaction(async (tx) => {
     const existingVote = await tx.vote.findUnique({
       where: { trackId_userId: { trackId, userId } },

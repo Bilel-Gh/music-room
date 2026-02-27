@@ -59,7 +59,7 @@ export async function getUserProfile(targetUserId: string, requestingUserId: str
     throw Object.assign(new Error('User not found'), { status: 404 });
   }
 
-  // Soi-même → tout voir
+  // Self → show everything
   if (targetUserId === requestingUserId) {
     return {
       id: user.id,
@@ -78,7 +78,7 @@ export async function getUserProfile(targetUserId: string, requestingUserId: str
     name: user.name,
     publicInfo: user.publicInfo,
     friendsInfo: friends ? user.friendsInfo : undefined,
-    // privateInfo n'est JAMAIS visible par les autres
+    // privateInfo is NEVER visible to others
     musicPreferences: user.musicPreferences,
   };
 }
@@ -93,7 +93,7 @@ export async function sendFriendRequest(userId: string, friendId: string) {
     throw Object.assign(new Error('User not found'), { status: 404 });
   }
 
-  // Vérifier si une relation existe déjà (dans les deux sens)
+  // Check if a relationship already exists (both directions)
   const existing = await prisma.friendship.findFirst({
     where: {
       OR: [
@@ -115,7 +115,7 @@ export async function sendFriendRequest(userId: string, friendId: string) {
 }
 
 export async function acceptFriendRequest(userId: string, friendId: string) {
-  // On cherche la demande où friendId nous a envoyé une demande
+  // Find the request where friendId sent us a request
   const request = await prisma.friendship.findFirst({
     where: {
       userId: friendId,
@@ -210,7 +210,7 @@ export async function getFriends(userId: string) {
     },
   });
 
-  // Retourner l'autre personne dans chaque relation
+  // Return the other person in each relationship
   return friendships.map(f =>
     f.userId === userId ? f.friend : f.user
   );

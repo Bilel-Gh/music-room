@@ -18,13 +18,13 @@ router.use(authenticate);
  * @swagger
  * /playlists:
  *   get:
- *     summary: Lister les playlists publiques
+ *     summary: List public playlists
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste des playlists
+ *         description: List of playlists
  */
 router.get('/', playlistController.listPlaylists);
 
@@ -32,13 +32,13 @@ router.get('/', playlistController.listPlaylists);
  * @swagger
  * /playlists/me:
  *   get:
- *     summary: Mes playlists (creees ou rejointes)
+ *     summary: My playlists (created or joined)
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste des playlists de l'utilisateur
+ *         description: List of user playlists
  */
 router.get('/me', playlistController.listMyPlaylists);
 
@@ -46,7 +46,7 @@ router.get('/me', playlistController.listMyPlaylists);
  * @swagger
  * /playlists:
  *   post:
- *     summary: Creer une playlist
+ *     summary: Create a playlist
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
@@ -70,7 +70,7 @@ router.get('/me', playlistController.listMyPlaylists);
  *                 enum: [OPEN, INVITE_ONLY]
  *     responses:
  *       201:
- *         description: Playlist creee
+ *         description: Playlist created
  */
 router.post('/', validate(createPlaylistSchema), playlistController.createPlaylist);
 
@@ -78,7 +78,7 @@ router.post('/', validate(createPlaylistSchema), playlistController.createPlayli
  * @swagger
  * /playlists/{id}:
  *   get:
- *     summary: Details d'une playlist
+ *     summary: Playlist details
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
@@ -90,9 +90,9 @@ router.post('/', validate(createPlaylistSchema), playlistController.createPlayli
  *           type: string
  *     responses:
  *       200:
- *         description: Details de la playlist
+ *         description: Playlist details
  *       404:
- *         description: Playlist non trouvee
+ *         description: Playlist not found
  */
 router.get('/:id', playlistController.getPlaylist);
 
@@ -100,7 +100,7 @@ router.get('/:id', playlistController.getPlaylist);
  * @swagger
  * /playlists/{id}:
  *   put:
- *     summary: Modifier une playlist (createur uniquement)
+ *     summary: Update a playlist (creator only)
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
@@ -124,9 +124,9 @@ router.get('/:id', playlistController.getPlaylist);
  *                 type: boolean
  *     responses:
  *       200:
- *         description: Playlist mise a jour
+ *         description: Playlist updated
  *       403:
- *         description: Non autorise
+ *         description: Unauthorized
  */
 router.put('/:id', validate(updatePlaylistSchema), playlistController.updatePlaylist);
 
@@ -134,7 +134,7 @@ router.put('/:id', validate(updatePlaylistSchema), playlistController.updatePlay
  * @swagger
  * /playlists/{id}:
  *   delete:
- *     summary: Supprimer une playlist (createur uniquement)
+ *     summary: Delete a playlist (creator only)
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
@@ -146,9 +146,9 @@ router.put('/:id', validate(updatePlaylistSchema), playlistController.updatePlay
  *           type: string
  *     responses:
  *       204:
- *         description: Playlist supprimee
+ *         description: Playlist deleted
  *       403:
- *         description: Non autorise
+ *         description: Unauthorized
  */
 router.delete('/:id', playlistController.deletePlaylist);
 
@@ -156,7 +156,7 @@ router.delete('/:id', playlistController.deletePlaylist);
  * @swagger
  * /playlists/{id}/tracks:
  *   get:
- *     summary: Liste des tracks de la playlist (triees par position)
+ *     summary: List playlist tracks (sorted by position)
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
@@ -168,7 +168,7 @@ router.delete('/:id', playlistController.deletePlaylist);
  *           type: string
  *     responses:
  *       200:
- *         description: Liste des tracks
+ *         description: List of tracks
  */
 router.get('/:id/tracks', playlistController.getPlaylistTracks);
 
@@ -176,7 +176,7 @@ router.get('/:id/tracks', playlistController.getPlaylistTracks);
  * @swagger
  * /playlists/{id}/tracks:
  *   post:
- *     summary: Ajouter une track a la playlist
+ *     summary: Add a track to the playlist
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
@@ -204,9 +204,9 @@ router.get('/:id/tracks', playlistController.getPlaylistTracks);
  *                 type: string
  *     responses:
  *       201:
- *         description: Track ajoutee
+ *         description: Track added
  *       403:
- *         description: Pas le droit d'editer
+ *         description: No edit access
  */
 router.post('/:id/tracks', validate(addPlaylistTrackSchema), playlistController.addTrack);
 
@@ -214,7 +214,7 @@ router.post('/:id/tracks', validate(addPlaylistTrackSchema), playlistController.
  * @swagger
  * /playlists/{id}/tracks/{trackId}:
  *   delete:
- *     summary: Supprimer une track de la playlist
+ *     summary: Remove a track from the playlist
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
@@ -231,11 +231,11 @@ router.post('/:id/tracks', validate(addPlaylistTrackSchema), playlistController.
  *           type: string
  *     responses:
  *       204:
- *         description: Track supprimee
+ *         description: Track removed
  *       403:
- *         description: Pas le droit d'editer
+ *         description: No edit access
  *       404:
- *         description: Track non trouvee
+ *         description: Track not found
  */
 router.delete('/:id/tracks/:trackId', playlistController.removeTrack);
 
@@ -243,7 +243,7 @@ router.delete('/:id/tracks/:trackId', playlistController.removeTrack);
  * @swagger
  * /playlists/{id}/tracks/{trackId}/position:
  *   put:
- *     summary: Reordonner une track dans la playlist
+ *     summary: Reorder a track in the playlist
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
@@ -271,11 +271,11 @@ router.delete('/:id/tracks/:trackId', playlistController.removeTrack);
  *                 example: 0
  *     responses:
  *       200:
- *         description: Liste mise a jour avec nouvelles positions
+ *         description: Updated list with new positions
  *       403:
- *         description: Pas le droit d'editer
+ *         description: No edit access
  *       404:
- *         description: Track non trouvee
+ *         description: Track not found
  */
 router.put('/:id/tracks/:trackId/position', validate(reorderTrackSchema), playlistController.reorderTrack);
 
@@ -283,7 +283,7 @@ router.put('/:id/tracks/:trackId/position', validate(reorderTrackSchema), playli
  * @swagger
  * /playlists/{id}/invite:
  *   post:
- *     summary: Inviter un utilisateur a la playlist
+ *     summary: Invite a user to the playlist
  *     tags: [Playlists]
  *     security:
  *       - bearerAuth: []
@@ -307,11 +307,11 @@ router.put('/:id/tracks/:trackId/position', validate(reorderTrackSchema), playli
  *                 type: boolean
  *     responses:
  *       201:
- *         description: Utilisateur invite
+ *         description: User invited
  *       403:
- *         description: Seul le createur peut inviter
+ *         description: Only the creator can invite
  *       409:
- *         description: Deja membre
+ *         description: Already a member
  */
 router.post('/:id/invite', validate(inviteUserSchema), playlistController.inviteUser);
 

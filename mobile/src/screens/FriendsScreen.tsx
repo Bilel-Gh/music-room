@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   ScrollView,
   RefreshControl,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
 
 interface UserResult {
   id: string;
@@ -91,19 +91,19 @@ export default function FriendsScreen() {
     setSendingTo(userId);
     try {
       await api.post(`/users/friend-requests/${userId}`);
-      Alert.alert('Succes', 'Demande d\'ami envoyee !');
+      crossAlert('Succes', 'Demande d\'ami envoyee !');
       setSearchResults(prev => prev.filter(u => u.id !== userId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible d\'envoyer la demande';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setSendingTo(null);
     }
   };
 
   const handleRemoveFriend = (friendId: string, friendName: string) => {
-    Alert.alert('Retirer', `Retirer ${friendName} de vos amis ?`, [
+    crossAlert('Retirer', `Retirer ${friendName} de vos amis ?`, [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Retirer',
@@ -114,7 +114,7 @@ export default function FriendsScreen() {
             await api.delete(`/users/friends/${friendId}`);
             setFriends(prev => prev.filter(f => f.id !== friendId));
           } catch {
-            Alert.alert('Erreur', 'Impossible de retirer cet ami');
+            crossAlert('Erreur', 'Impossible de retirer cet ami');
           } finally {
             setRemovingId(null);
           }

@@ -18,13 +18,13 @@ router.use(authenticate);
  * @swagger
  * /events:
  *   get:
- *     summary: Lister les événements publics
+ *     summary: List public events
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste des événements
+ *         description: List of events
  */
 router.get('/', eventController.listEvents);
 
@@ -32,7 +32,7 @@ router.get('/', eventController.listEvents);
  * @swagger
  * /events:
  *   post:
- *     summary: Créer un événement
+ *     summary: Create an event
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -46,7 +46,7 @@ router.get('/', eventController.listEvents);
  *             properties:
  *               name:
  *                 type: string
- *                 example: "Soirée Jazz"
+ *                 example: "Jazz Night"
  *               description:
  *                 type: string
  *               isPublic:
@@ -66,7 +66,7 @@ router.get('/', eventController.listEvents);
  *                 type: number
  *     responses:
  *       201:
- *         description: Événement créé
+ *         description: Event created
  */
 router.post('/', validate(createEventSchema), eventController.createEvent);
 
@@ -74,13 +74,13 @@ router.post('/', validate(createEventSchema), eventController.createEvent);
  * @swagger
  * /events/me:
  *   get:
- *     summary: Mes evenements (crees ou rejoints)
+ *     summary: My events (created or joined)
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste des evenements de l'utilisateur
+ *         description: List of user events
  */
 router.get('/me', eventController.listMyEvents);
 
@@ -88,13 +88,13 @@ router.get('/me', eventController.listMyEvents);
  * @swagger
  * /events/invitations:
  *   get:
- *     summary: Lister mes invitations en attente
+ *     summary: List my pending invitations
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste des invitations
+ *         description: List of invitations
  */
 router.get('/invitations', eventController.listPendingInvitations);
 
@@ -102,7 +102,7 @@ router.get('/invitations', eventController.listPendingInvitations);
  * @swagger
  * /events/{id}:
  *   get:
- *     summary: Détails d'un événement
+ *     summary: Event details
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -114,9 +114,9 @@ router.get('/invitations', eventController.listPendingInvitations);
  *           type: string
  *     responses:
  *       200:
- *         description: Détails de l'événement
+ *         description: Event details
  *       404:
- *         description: Événement non trouvé
+ *         description: Event not found
  */
 router.get('/:id', eventController.getEvent);
 
@@ -124,7 +124,7 @@ router.get('/:id', eventController.getEvent);
  * @swagger
  * /events/{id}:
  *   put:
- *     summary: Modifier un événement (créateur uniquement)
+ *     summary: Update an event (creator only)
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -148,9 +148,9 @@ router.get('/:id', eventController.getEvent);
  *                 type: boolean
  *     responses:
  *       200:
- *         description: Événement mis à jour
+ *         description: Event updated
  *       403:
- *         description: Non autorisé (pas le créateur)
+ *         description: Unauthorized (not the creator)
  */
 router.put('/:id', validate(updateEventSchema), eventController.updateEvent);
 
@@ -158,7 +158,7 @@ router.put('/:id', validate(updateEventSchema), eventController.updateEvent);
  * @swagger
  * /events/{id}:
  *   delete:
- *     summary: Supprimer un événement (créateur uniquement)
+ *     summary: Delete an event (creator only)
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -170,9 +170,9 @@ router.put('/:id', validate(updateEventSchema), eventController.updateEvent);
  *           type: string
  *     responses:
  *       204:
- *         description: Événement supprimé
+ *         description: Event deleted
  *       403:
- *         description: Non autorisé
+ *         description: Unauthorized
  */
 router.delete('/:id', eventController.deleteEvent);
 
@@ -180,7 +180,7 @@ router.delete('/:id', eventController.deleteEvent);
  * @swagger
  * /events/{id}/join:
  *   post:
- *     summary: Rejoindre un événement
+ *     summary: Join an event
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -192,17 +192,17 @@ router.delete('/:id', eventController.deleteEvent);
  *           type: string
  *     responses:
  *       201:
- *         description: Rejoint avec succès
+ *         description: Successfully joined
  *       403:
- *         description: Événement sur invitation uniquement
+ *         description: Invite-only event
  *       409:
- *         description: Déjà membre
+ *         description: Already a member
  */
 /**
  * @swagger
  * /events/{id}/accept:
  *   post:
- *     summary: Accepter une invitation
+ *     summary: Accept an invitation
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -214,9 +214,9 @@ router.delete('/:id', eventController.deleteEvent);
  *           type: string
  *     responses:
  *       200:
- *         description: Invitation acceptee
+ *         description: Invitation accepted
  *       404:
- *         description: Pas d'invitation en attente
+ *         description: No pending invitation
  */
 router.post('/:id/accept', eventController.acceptInvitation);
 
@@ -224,7 +224,7 @@ router.post('/:id/accept', eventController.acceptInvitation);
  * @swagger
  * /events/{id}/reject:
  *   delete:
- *     summary: Refuser une invitation
+ *     summary: Reject an invitation
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -236,9 +236,9 @@ router.post('/:id/accept', eventController.acceptInvitation);
  *           type: string
  *     responses:
  *       204:
- *         description: Invitation refusee
+ *         description: Invitation rejected
  *       404:
- *         description: Pas d'invitation en attente
+ *         description: No pending invitation
  */
 router.delete('/:id/reject', eventController.rejectInvitation);
 
@@ -248,7 +248,7 @@ router.post('/:id/join', eventController.joinEvent);
  * @swagger
  * /events/{id}/invite:
  *   post:
- *     summary: Inviter un utilisateur a l'evenement
+ *     summary: Invite a user to the event
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -270,11 +270,11 @@ router.post('/:id/join', eventController.joinEvent);
  *                 type: string
  *     responses:
  *       201:
- *         description: Utilisateur invite
+ *         description: User invited
  *       403:
- *         description: Seul le createur peut inviter
+ *         description: Only the creator can invite
  *       409:
- *         description: Deja membre
+ *         description: Already a member
  */
 router.post('/:id/invite', validate(inviteEventSchema), eventController.inviteUser);
 
@@ -282,7 +282,7 @@ router.post('/:id/invite', validate(inviteEventSchema), eventController.inviteUs
  * @swagger
  * /events/{id}/tracks:
  *   get:
- *     summary: Liste des tracks triées par votes
+ *     summary: List tracks sorted by votes
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -294,7 +294,7 @@ router.post('/:id/invite', validate(inviteEventSchema), eventController.inviteUs
  *           type: string
  *     responses:
  *       200:
- *         description: Liste des tracks
+ *         description: List of tracks
  */
 router.get('/:id/tracks', eventController.getEventTracks);
 
@@ -302,7 +302,7 @@ router.get('/:id/tracks', eventController.getEventTracks);
  * @swagger
  * /events/{id}/tracks:
  *   post:
- *     summary: Ajouter une track à l'événement
+ *     summary: Add a track to the event
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -330,9 +330,9 @@ router.get('/:id/tracks', eventController.getEventTracks);
  *                 type: string
  *     responses:
  *       201:
- *         description: Track ajoutée
+ *         description: Track added
  *       403:
- *         description: Non autorisé (événement sur invitation)
+ *         description: Unauthorized (invite-only event)
  */
 router.post('/:id/tracks', validate(addTrackSchema), eventController.addTrack);
 
@@ -340,7 +340,7 @@ router.post('/:id/tracks', validate(addTrackSchema), eventController.addTrack);
  * @swagger
  * /events/{id}/tracks/{trackId}/vote:
  *   post:
- *     summary: Voter pour une track
+ *     summary: Vote for a track
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -367,11 +367,11 @@ router.post('/:id/tracks', validate(addTrackSchema), eventController.addTrack);
  *                 type: number
  *     responses:
  *       200:
- *         description: Vote enregistré
+ *         description: Vote recorded
  *       403:
- *         description: Non autorisé (pas membre ou hors zone)
+ *         description: Unauthorized (not a member or out of range)
  *       409:
- *         description: Déjà voté
+ *         description: Already voted
  */
 router.post('/:id/tracks/:trackId/vote', validate(voteSchema), eventController.voteForTrack);
 

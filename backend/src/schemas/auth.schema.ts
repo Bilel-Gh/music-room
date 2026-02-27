@@ -33,6 +33,10 @@ export const linkGoogleSchema = z.object({
   googleId: z.string(),
 });
 
+export const googleMobileSchema = z.object({
+  idToken: z.string().min(1),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;

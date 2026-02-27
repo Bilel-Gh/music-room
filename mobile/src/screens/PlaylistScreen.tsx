@@ -8,7 +8,6 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   Keyboard,
   Modal,
   Switch,
@@ -18,6 +17,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
+import { crossAlert } from '../utils/alert';
 import { getSocket, connectSocket } from '../services/socket';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Playlist'>;
@@ -84,7 +84,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   }, [playlistId]);
 
   const handleDelete = useCallback(() => {
-    Alert.alert('Supprimer', 'Supprimer cette playlist ?', [
+    crossAlert('Supprimer', 'Supprimer cette playlist ?', [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Supprimer',
@@ -94,7 +94,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
             await api.delete(`/playlists/${playlistId}`);
             navigation.goBack();
           } catch {
-            Alert.alert('Erreur', 'Impossible de supprimer');
+            crossAlert('Erreur', 'Impossible de supprimer');
           }
         },
       },
@@ -115,7 +115,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
       }
       setInviteCanEdit(defaults);
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger la liste d\'amis');
+      crossAlert('Erreur', 'Impossible de charger la liste d\'amis');
     } finally {
       setLoadingFriends(false);
     }
@@ -156,7 +156,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
       setPlaylist(plRes.data.data);
       setTracks(tracksRes.data.data);
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger la playlist');
+      crossAlert('Erreur', 'Impossible de charger la playlist');
     } finally {
       setLoading(false);
     }
@@ -185,12 +185,12 @@ export default function PlaylistScreen({ route, navigation }: Props) {
         userId: friendId,
         canEdit: inviteCanEdit[friendId] ?? true,
       });
-      Alert.alert('Succes', 'Invitation envoyee');
+      crossAlert('Succes', 'Invitation envoyee');
       setFriends(prev => prev.filter(f => f.id !== friendId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible d\'inviter';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setInvitingId(null);
     }
@@ -198,7 +198,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
 
   const handleAddTrack = async () => {
     if (!title.trim() || !artist.trim()) {
-      Alert.alert('Erreur', 'Titre et artiste requis');
+      crossAlert('Erreur', 'Titre et artiste requis');
       return;
     }
 
@@ -214,14 +214,14 @@ export default function PlaylistScreen({ route, navigation }: Props) {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible d\'ajouter la track';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setAdding(false);
     }
   };
 
   const handleDeleteTrack = async (trackId: string) => {
-    Alert.alert('Supprimer', 'Retirer cette track de la playlist ?', [
+    crossAlert('Supprimer', 'Retirer cette track de la playlist ?', [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Supprimer',
@@ -233,7 +233,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
           } catch (err: unknown) {
             const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
               || 'Impossible de supprimer';
-            Alert.alert('Erreur', msg);
+            crossAlert('Erreur', msg);
           } finally {
             setBusyTrackId(null);
           }
@@ -255,7 +255,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible de deplacer';
-      Alert.alert('Erreur', msg);
+      crossAlert('Erreur', msg);
     } finally {
       setBusyTrackId(null);
     }
