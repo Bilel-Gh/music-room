@@ -44,6 +44,19 @@ export async function listEvents() {
   });
 }
 
+export async function listMyEvents(userId: string) {
+  return prisma.event.findMany({
+    where: {
+      members: { some: { userId } },
+    },
+    include: {
+      creator: { select: { id: true, name: true } },
+      _count: { select: { members: true, tracks: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export async function updateEvent(eventId: string, userId: string, data: UpdateEventInput) {
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event) {
@@ -95,6 +108,32 @@ export async function joinEvent(eventId: string, userId: string) {
 
   return prisma.eventMember.create({
     data: { eventId, userId, role: 'PARTICIPANT' },
+  });
+}
+
+export async function inviteUser(eventId: string, userId: string, targetUserId: string) {
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) {
+    throw Object.assign(new Error('Event not found'), { status: 404 });
+  }
+  if (event.creatorId !== userId) {
+    throw Object.assign(new Error('Only the creator can invite users'), { status: 403 });
+  }
+
+  const target = await prisma.user.findUnique({ where: { id: targetUserId } });
+  if (!target) {
+    throw Object.assign(new Error('User not found'), { status: 404 });
+  }
+
+  const existing = await prisma.eventMember.findUnique({
+    where: { eventId_userId: { eventId, userId: targetUserId } },
+  });
+  if (existing) {
+    throw Object.assign(new Error('User is already a member'), { status: 409 });
+  }
+
+  return prisma.eventMember.create({
+    data: { eventId, userId: targetUserId, role: 'INVITED' },
   });
 }
 

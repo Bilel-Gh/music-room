@@ -22,13 +22,22 @@ interface UserProfile {
   musicPreferences: string[];
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Editable fields
   const [name, setName] = useState('');
   const [publicInfo, setPublicInfo] = useState('');
   const [friendsInfo, setFriendsInfo] = useState('');
@@ -124,34 +133,40 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Text style={styles.email}>{profile.email}</Text>
+          {/* Avatar */}
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{getInitials(profile.name)}</Text>
+            </View>
+            <Text style={styles.profileName}>{profile.name}</Text>
+            <Text style={styles.email}>{profile.email}</Text>
+          </View>
 
-          <Text style={styles.profileName}>{profile.name}</Text>
-
+          {/* Info cards */}
           {profile.publicInfo ? (
-            <View style={styles.infoBlock}>
-              <Text style={styles.infoLabel}>Info publique</Text>
-              <Text style={styles.infoValue}>{profile.publicInfo}</Text>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Info publique</Text>
+              <Text style={styles.cardValue}>{profile.publicInfo}</Text>
             </View>
           ) : null}
 
           {profile.friendsInfo ? (
-            <View style={styles.infoBlock}>
-              <Text style={styles.infoLabel}>Info amis</Text>
-              <Text style={styles.infoValue}>{profile.friendsInfo}</Text>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Info amis</Text>
+              <Text style={styles.cardValue}>{profile.friendsInfo}</Text>
             </View>
           ) : null}
 
           {profile.privateInfo ? (
-            <View style={styles.infoBlock}>
-              <Text style={styles.infoLabel}>Info privee</Text>
-              <Text style={styles.infoValue}>{profile.privateInfo}</Text>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Info privee</Text>
+              <Text style={styles.cardValue}>{profile.privateInfo}</Text>
             </View>
           ) : null}
 
           {profile.musicPreferences.length > 0 ? (
-            <View style={styles.infoBlock}>
-              <Text style={styles.infoLabel}>Preferences musicales</Text>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Preferences musicales</Text>
               <View style={styles.tagsRow}>
                 {profile.musicPreferences.map((pref, i) => (
                   <View key={i} style={styles.tag}>
@@ -247,7 +262,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -258,31 +273,58 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
+  // Avatar section
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#4f46e5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  avatarText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  profileName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
   email: {
     fontSize: 14,
     color: '#888',
     textAlign: 'center',
     marginBottom: 8,
   },
-  profileName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    textAlign: 'center',
-    marginBottom: 24,
+  // Info cards
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  infoBlock: {
-    marginBottom: 18,
-  },
-  infoLabel: {
+  cardLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: '#888',
-    marginBottom: 4,
+    marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  infoValue: {
+  cardValue: {
     fontSize: 15,
     color: '#333',
     lineHeight: 22,
@@ -309,7 +351,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: 20,
   },
   editButtonText: {
     color: '#fff',
@@ -329,7 +371,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  // Edit mode styles
+  // Edit mode
   label: {
     fontSize: 14,
     fontWeight: '600',
@@ -343,7 +385,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#fff',
     color: '#1a1a1a',
   },
   multiline: {

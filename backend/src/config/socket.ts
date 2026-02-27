@@ -7,6 +7,9 @@ interface ServerToClientEvents {
   playlistTrackAdded: (data: { playlistId: string; tracks: unknown[] }) => void;
   playlistTrackRemoved: (data: { playlistId: string; tracks: unknown[] }) => void;
   playlistTrackReordered: (data: { playlistId: string; tracks: unknown[] }) => void;
+  eventCreated: (data: { event: unknown }) => void;
+  playlistCreated: (data: { playlist: unknown }) => void;
+  friendRequestReceived: (data: { from: { id: string; name: string; email: string } }) => void;
 }
 
 interface ClientToServerEvents {
@@ -14,6 +17,7 @@ interface ClientToServerEvents {
   leaveEvent: (eventId: string) => void;
   joinPlaylist: (playlistId: string) => void;
   leavePlaylist: (playlistId: string) => void;
+  authenticate: (userId: string) => void;
 }
 
 let io: Server<ClientToServerEvents, ServerToClientEvents> | null = null;
@@ -24,6 +28,10 @@ export function initSocketServer(httpServer: HttpServer) {
   });
 
   io.on('connection', (socket) => {
+    socket.on('authenticate', (userId) => {
+      socket.join(`user:${userId}`);
+    });
+
     socket.on('joinEvent', (eventId) => {
       socket.join(`event:${eventId}`);
     });

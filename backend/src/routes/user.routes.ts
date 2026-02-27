@@ -80,23 +80,46 @@ router.get('/me/friends', userController.getFriends);
 
 /**
  * @swagger
+ * /users/friends/{friendId}:
+ *   delete:
+ *     summary: Remove a friend
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: friendId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       204:
+ *         description: Friend removed
+ *       404:
+ *         description: Friendship not found
+ */
+router.delete('/friends/:friendId', userController.removeFriend);
+
+/**
+ * @swagger
  * /users/search:
  *   get:
- *     summary: Rechercher des utilisateurs par email
+ *     summary: Search users by name or email
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: email
+ *         name: q
  *         required: true
  *         schema:
  *           type: string
+ *         description: Search by name or email (min 2 chars)
  *     responses:
  *       200:
- *         description: Liste des utilisateurs correspondants
+ *         description: Matching users
  *       400:
- *         description: Requête invalide
+ *         description: Query too short
  */
 router.get('/search', userController.searchUsers);
 
@@ -161,6 +184,28 @@ router.post('/friend-requests/:friendId', userController.sendFriendRequest);
  *         description: Aucune demande en attente
  */
 router.put('/friend-requests/:friendId/accept', userController.acceptFriendRequest);
+
+/**
+ * @swagger
+ * /users/friend-requests/{friendId}/reject:
+ *   delete:
+ *     summary: Reject a friend request
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: friendId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       204:
+ *         description: Request rejected
+ *       404:
+ *         description: No pending request found
+ */
+router.delete('/friend-requests/:friendId/reject', userController.rejectFriendRequest);
 
 /**
  * @swagger

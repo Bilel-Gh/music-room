@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
+import { connectSocket, onFriendRequest } from '../services/socket';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -12,6 +13,7 @@ import EventScreen from '../screens/EventScreen';
 import PlaylistScreen from '../screens/PlaylistScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import FriendsScreen from '../screens/FriendsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 
 export type RootStackParamList = {
@@ -26,6 +28,7 @@ export type RootStackParamList = {
 export type TabParamList = {
   Home: undefined;
   Friends: undefined;
+  Notifications: undefined;
   Profile: undefined;
 };
 
@@ -33,6 +36,17 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
 function MainTabs() {
+  const [notifCount, setNotifCount] = useState(0);
+
+  // Connect socket and listen for friend requests
+  useEffect(() => {
+    connectSocket();
+    const unsub = onFriendRequest(() => {
+      setNotifCount(prev => prev + 1);
+    });
+    return unsub;
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -62,6 +76,22 @@ function MainTabs() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
           ),
+        }}
+      />
+      <Tab.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          title: 'Notifications',
+          tabBarLabel: 'Notifs',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="notifications-outline" size={size} color={color} />
+          ),
+          tabBarBadge: notifCount > 0 ? notifCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#ef4444', fontSize: 11 },
+        }}
+        listeners={{
+          tabPress: () => setNotifCount(0),
         }}
       />
       <Tab.Screen

@@ -38,8 +38,13 @@ export const joinEventSchema = z.object({
   longitude: z.number().min(-180).max(180).optional(),
 });
 
+export const inviteEventSchema = z.object({
+  userId: z.string().uuid(),
+});
+
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 export type AddTrackInput = z.infer<typeof addTrackSchema>;
 export type VoteInput = z.infer<typeof voteSchema>;
 export type JoinEventInput = z.infer<typeof joinEventSchema>;
+export type InviteEventInput = z.infer<typeof inviteEventSchema>;

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Keyboard,
   ScrollView,
   RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -23,39 +23,45 @@ interface UserResult {
   email: string;
 }
 
-interface PendingRequest {
-  id: string;
-  name: string;
-  email: string;
-  requestId: string;
-}
-
 export default function FriendsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [searchEmail, setSearchEmail] = useState('');
+  const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [friends, setFriends] = useState<UserResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sendingTo, setSendingTo] = useState<string | null>(null);
-  const [acceptingFrom, setAcceptingFrom] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      loadFriends();
     }, [])
   );
 
-  const loadData = async () => {
+  // Debounced search
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      performSearch(query.trim());
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query]);
+
+  const loadFriends = async () => {
     try {
-      const [pendingRes, friendsRes] = await Promise.all([
-        api.get('/users/friend-requests/pending'),
-        api.get('/users/me/friends'),
-      ]);
-      setPendingRequests(pendingRes.data.data);
-      setFriends(friendsRes.data.data);
+      const { data } = await api.get('/users/me/friends');
+      setFriends(data.data);
     } catch {
       // silent
     } finally {
@@ -64,26 +70,18 @@ export default function FriendsScreen() {
     }
   };
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadData();
-  };
+    loadFriends();
+  }, []);
 
-  const handleSearch = async () => {
-    if (searchEmail.trim().length < 2) {
-      Alert.alert('Erreur', 'Entrez au moins 2 caracteres');
-      return;
-    }
-    Keyboard.dismiss();
+  const performSearch = async (q: string) => {
     setSearching(true);
     try {
-      const { data } = await api.get(`/users/search?email=${encodeURIComponent(searchEmail.trim())}`);
+      const { data } = await api.get(`/users/search?q=${encodeURIComponent(q)}`);
       setSearchResults(data.data);
-      if (data.data.length === 0) {
-        Alert.alert('Aucun resultat', 'Aucun utilisateur trouve avec cet email');
-      }
     } catch {
-      Alert.alert('Erreur', 'Impossible de rechercher');
+      // silent
     } finally {
       setSearching(false);
     }
@@ -95,7 +93,6 @@ export default function FriendsScreen() {
       await api.post(`/users/friend-requests/${userId}`);
       Alert.alert('Succes', 'Demande d\'ami envoyee !');
       setSearchResults(prev => prev.filter(u => u.id !== userId));
-      setSearchEmail('');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible d\'envoyer la demande';
@@ -105,18 +102,25 @@ export default function FriendsScreen() {
     }
   };
 
-  const handleAccept = async (friendId: string) => {
-    setAcceptingFrom(friendId);
-    try {
-      await api.put(`/users/friend-requests/${friendId}/accept`);
-      await loadData();
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'accepter';
-      Alert.alert('Erreur', msg);
-    } finally {
-      setAcceptingFrom(null);
-    }
+  const handleRemoveFriend = (friendId: string, friendName: string) => {
+    Alert.alert('Retirer', `Retirer ${friendName} de vos amis ?`, [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Retirer',
+        style: 'destructive',
+        onPress: async () => {
+          setRemovingId(friendId);
+          try {
+            await api.delete(`/users/friends/${friendId}`);
+            setFriends(prev => prev.filter(f => f.id !== friendId));
+          } catch {
+            Alert.alert('Erreur', 'Impossible de retirer cet ami');
+          } finally {
+            setRemovingId(null);
+          }
+        },
+      },
+    ]);
   };
 
   if (loading) {
@@ -136,34 +140,27 @@ export default function FriendsScreen() {
       >
         {/* Search section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Rechercher un utilisateur</Text>
-          <View style={styles.searchRow}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Email..."
-              placeholderTextColor="#999"
-              value={searchEmail}
-              onChangeText={setSearchEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              returnKeyType="search"
-              onSubmitEditing={handleSearch}
-            />
-            <TouchableOpacity
-              style={[styles.searchButton, searching && styles.buttonDisabled]}
-              onPress={handleSearch}
-              disabled={searching}
-            >
-              {searching ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.searchButtonText}>Chercher</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.sectionTitle}>Rechercher</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Nom ou email..."
+            placeholderTextColor="#999"
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            returnKeyType="search"
+          />
+
+          {searching && (
+            <ActivityIndicator size="small" color="#4f46e5" style={{ marginVertical: 8 }} />
+          )}
 
           {searchResults.map(user => (
-            <View key={user.id} style={styles.userCard}>
+            <TouchableOpacity
+              key={user.id}
+              style={styles.userCard}
+              onPress={() => navigation.navigate('UserProfile', { userId: user.id })}
+            >
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{user.name}</Text>
                 <Text style={styles.userEmail}>{user.email}</Text>
@@ -179,37 +176,9 @@ export default function FriendsScreen() {
                   <Text style={styles.actionBtnText}>Ajouter</Text>
                 )}
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
-
-        {/* Pending requests */}
-        {pendingRequests.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Demandes en attente ({pendingRequests.length})
-            </Text>
-            {pendingRequests.map(req => (
-              <View key={req.id} style={styles.userCard}>
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{req.name}</Text>
-                  <Text style={styles.userEmail}>{req.email}</Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.acceptBtn, acceptingFrom === req.id && styles.buttonDisabled]}
-                  onPress={() => handleAccept(req.id)}
-                  disabled={acceptingFrom === req.id}
-                >
-                  {acceptingFrom === req.id ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.actionBtnText}>Accepter</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        )}
 
         {/* Friends list */}
         <View style={styles.section}>
@@ -227,6 +196,16 @@ export default function FriendsScreen() {
                   <Text style={styles.userName}>{friend.name}</Text>
                   <Text style={styles.userEmail}>{friend.email}</Text>
                 </View>
+                {removingId === friend.id ? (
+                  <ActivityIndicator size="small" color="#ef4444" style={{ marginRight: 8 }} />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => handleRemoveFriend(friend.id, friend.name)}
+                    style={styles.removeBtn}
+                  >
+                    <Ionicons name="close-circle-outline" size={22} color="#ef4444" />
+                  </TouchableOpacity>
+                )}
                 <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
             ))
@@ -260,35 +239,18 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 12,
   },
-  searchRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
-  },
   searchInput: {
-    flex: 1,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
-    padding: 10,
+    padding: 12,
     fontSize: 15,
     backgroundColor: '#fff',
     color: '#1a1a1a',
-  },
-  searchButton: {
-    backgroundColor: '#4f46e5',
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginBottom: 10,
   },
   buttonDisabled: {
     opacity: 0.7,
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
   },
   userCard: {
     flexDirection: 'row',
@@ -324,14 +286,6 @@ const styles = StyleSheet.create({
     minWidth: 75,
     alignItems: 'center',
   },
-  acceptBtn: {
-    backgroundColor: '#16a34a',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    minWidth: 80,
-    alignItems: 'center',
-  },
   actionBtnText: {
     color: '#fff',
     fontSize: 13,
@@ -353,11 +307,15 @@ const styles = StyleSheet.create({
   friendInfo: {
     flex: 1,
   },
+  removeBtn: {
+    padding: 4,
+    marginRight: 4,
+  },
   chevron: {
     fontSize: 22,
     color: '#ccc',
     fontWeight: '300',
-    marginLeft: 8,
+    marginLeft: 4,
   },
   emptyText: {
     textAlign: 'center',

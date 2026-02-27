@@ -6,6 +6,7 @@ import {
   updateEventSchema,
   addTrackSchema,
   voteSchema,
+  inviteEventSchema,
 } from '../schemas/event.schema.js';
 import * as eventController from '../controllers/event.controller.js';
 
@@ -68,6 +69,20 @@ router.get('/', eventController.listEvents);
  *         description: Événement créé
  */
 router.post('/', validate(createEventSchema), eventController.createEvent);
+
+/**
+ * @swagger
+ * /events/me:
+ *   get:
+ *     summary: Mes evenements (crees ou rejoints)
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Liste des evenements de l'utilisateur
+ */
+router.get('/me', eventController.listMyEvents);
 
 /**
  * @swagger
@@ -170,6 +185,40 @@ router.delete('/:id', eventController.deleteEvent);
  *         description: Déjà membre
  */
 router.post('/:id/join', eventController.joinEvent);
+
+/**
+ * @swagger
+ * /events/{id}/invite:
+ *   post:
+ *     summary: Inviter un utilisateur a l'evenement
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId]
+ *             properties:
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Utilisateur invite
+ *       403:
+ *         description: Seul le createur peut inviter
+ *       409:
+ *         description: Deja membre
+ */
+router.post('/:id/invite', validate(inviteEventSchema), eventController.inviteUser);
 
 /**
  * @swagger

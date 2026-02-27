@@ -7,6 +7,12 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
   try {
     const event = await eventService.createEvent(req.body, req.user!.userId);
     res.status(201).json({ success: true, data: event });
+
+    // Broadcast to all clients if public
+    const io = getIO();
+    if (io && event.isPublic) {
+      io.emit('eventCreated', { event });
+    }
   } catch (err) {
     next(err);
   }
@@ -16,6 +22,15 @@ export async function getEvent(req: Request, res: Response, next: NextFunction) 
   try {
     const event = await eventService.getEvent(req.params.id as string);
     res.json({ success: true, data: event });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listMyEvents(req: Request, res: Response, next: NextFunction) {
+  try {
+    const events = await eventService.listMyEvents(req.user!.userId);
+    res.json({ success: true, data: events });
   } catch (err) {
     next(err);
   }
@@ -55,6 +70,19 @@ export async function deleteEvent(req: Request, res: Response, next: NextFunctio
 export async function joinEvent(req: Request, res: Response, next: NextFunction) {
   try {
     const member = await eventService.joinEvent(req.params.id as string, req.user!.userId);
+    res.status(201).json({ success: true, data: member });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function inviteUser(req: Request, res: Response, next: NextFunction) {
+  try {
+    const member = await eventService.inviteUser(
+      req.params.id as string,
+      req.user!.userId,
+      req.body.userId,
+    );
     res.status(201).json({ success: true, data: member });
   } catch (err) {
     next(err);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,12 @@ import {
   ActivityIndicator,
   Alert,
   Keyboard,
+  Modal,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { getSocket, connectSocket } from '../services/socket';
 
@@ -31,10 +34,18 @@ interface PlaylistData {
   name: string;
   description: string | null;
   licenseType: string;
+  creatorId: string;
+}
+
+interface Friend {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export default function PlaylistScreen({ route, navigation }: Props) {
   const { playlistId } = route.params;
+  const userId = useAuthStore(s => s.userId);
   const [playlist, setPlaylist] = useState<PlaylistData | null>(null);
   const [tracks, setTracks] = useState<PlaylistTrack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +53,12 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   const [artist, setArtist] = useState('');
   const [adding, setAdding] = useState(false);
   const [busyTrackId, setBusyTrackId] = useState<string | null>(null);
+
+  // Invite modal
+  const [inviteVisible, setInviteVisible] = useState(false);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [invitingId, setInvitingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -56,11 +73,58 @@ export default function PlaylistScreen({ route, navigation }: Props) {
     };
   }, [playlistId]);
 
-  useEffect(() => {
-    if (playlist) {
-      navigation.setOptions({ title: playlist.name });
+  const handleDelete = useCallback(() => {
+    Alert.alert('Supprimer', 'Supprimer cette playlist ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/playlists/${playlistId}`);
+            navigation.goBack();
+          } catch {
+            Alert.alert('Erreur', 'Impossible de supprimer');
+          }
+        },
+      },
+    ]);
+  }, [playlistId, navigation]);
+
+  const openInviteModal = useCallback(async () => {
+    setInviteVisible(true);
+    setLoadingFriends(true);
+    try {
+      const { data } = await api.get('/users/me/friends');
+      setFriends(data.data);
+    } catch {
+      Alert.alert('Erreur', 'Impossible de charger la liste d\'amis');
+    } finally {
+      setLoadingFriends(false);
     }
-  }, [playlist]);
+  }, []);
+
+  // Header: title + actions (delete + invite for creator)
+  useEffect(() => {
+    if (!playlist) return;
+    const isCreator = playlist.creatorId === userId;
+
+    navigation.setOptions({
+      title: playlist.name,
+      ...(isCreator && {
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', gap: 16, marginRight: 4 }}>
+            <TouchableOpacity onPress={openInviteModal}>
+              <Ionicons name="person-add-outline" size={22} color="#4f46e5" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDelete}>
+              <Ionicons name="trash-outline" size={22} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        ),
+      }),
+    });
+  }, [playlist, userId, handleDelete, openInviteModal]);
 
   const fetchData = async () => {
     try {
@@ -83,17 +147,29 @@ export default function PlaylistScreen({ route, navigation }: Props) {
     socket.emit('joinPlaylist', playlistId);
 
     socket.on('playlistTrackAdded', (data) => {
-      console.log('[Playlist] trackAdded received:', data.playlistId);
       if (data.playlistId === playlistId) setTracks(data.tracks as PlaylistTrack[]);
     });
     socket.on('playlistTrackRemoved', (data) => {
-      console.log('[Playlist] trackRemoved received:', data.playlistId);
       if (data.playlistId === playlistId) setTracks(data.tracks as PlaylistTrack[]);
     });
     socket.on('playlistTrackReordered', (data) => {
-      console.log('[Playlist] trackReordered received:', data.playlistId);
       if (data.playlistId === playlistId) setTracks(data.tracks as PlaylistTrack[]);
     });
+  };
+
+  const handleInvite = async (friendId: string) => {
+    setInvitingId(friendId);
+    try {
+      await api.post(`/playlists/${playlistId}/invite`, { userId: friendId });
+      Alert.alert('Succes', 'Invitation envoyee');
+      setFriends(prev => prev.filter(f => f.id !== friendId));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        || 'Impossible d\'inviter';
+      Alert.alert('Erreur', msg);
+    } finally {
+      setInvitingId(null);
+    }
   };
 
   const handleAddTrack = async () => {
@@ -120,7 +196,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleDelete = async (trackId: string) => {
+  const handleDeleteTrack = async (trackId: string) => {
     Alert.alert('Supprimer', 'Retirer cette track de la playlist ?', [
       { text: 'Annuler', style: 'cancel' },
       {
@@ -192,7 +268,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteBtn}
-              onPress={() => handleDelete(item.id)}
+              onPress={() => handleDeleteTrack(item.id)}
             >
               <Text style={styles.deleteBtnText}>✕</Text>
             </TouchableOpacity>
@@ -268,6 +344,56 @@ export default function PlaylistScreen({ route, navigation }: Props) {
             <Text style={styles.emptyText}>Aucune track pour le moment</Text>
           }
         />
+
+        {/* Invite modal */}
+        <Modal
+          visible={inviteVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setInviteVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Inviter un ami</Text>
+                <TouchableOpacity onPress={() => setInviteVisible(false)}>
+                  <Ionicons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              {loadingFriends ? (
+                <ActivityIndicator size="large" color="#4f46e5" style={{ marginVertical: 30 }} />
+              ) : friends.length === 0 ? (
+                <Text style={styles.emptyText}>Aucun ami a inviter</Text>
+              ) : (
+                <FlatList
+                  data={friends}
+                  keyExtractor={(f) => f.id}
+                  style={{ maxHeight: 300 }}
+                  renderItem={({ item: friend }) => (
+                    <View style={styles.friendRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.friendName}>{friend.name}</Text>
+                        <Text style={styles.friendEmail}>{friend.email}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.inviteBtn, invitingId === friend.id && styles.buttonDisabled]}
+                        onPress={() => handleInvite(friend.id)}
+                        disabled={invitingId === friend.id}
+                      >
+                        {invitingId === friend.id ? (
+                          <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                          <Text style={styles.inviteBtnText}>Inviter</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -426,5 +552,60 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 30,
     fontSize: 15,
+  },
+  // Invite modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    padding: 20,
+    paddingBottom: 40,
+    maxHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  friendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  friendName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  friendEmail: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 2,
+  },
+  inviteBtn: {
+    backgroundColor: '#4f46e5',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  inviteBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

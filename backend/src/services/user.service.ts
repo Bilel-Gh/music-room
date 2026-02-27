@@ -133,11 +133,30 @@ export async function acceptFriendRequest(userId: string, friendId: string) {
   return updated;
 }
 
-export async function searchUsers(email: string, requestingUserId: string) {
+export async function rejectFriendRequest(userId: string, friendId: string) {
+  const request = await prisma.friendship.findFirst({
+    where: {
+      userId: friendId,
+      friendId: userId,
+      status: 'PENDING',
+    },
+  });
+
+  if (!request) {
+    throw Object.assign(new Error('No pending friend request found'), { status: 404 });
+  }
+
+  await prisma.friendship.delete({ where: { id: request.id } });
+}
+
+export async function searchUsers(query: string, requestingUserId: string) {
   const users = await prisma.user.findMany({
     where: {
-      email: { contains: email, mode: 'insensitive' },
       id: { not: requestingUserId },
+      OR: [
+        { email: { contains: query, mode: 'insensitive' } },
+        { name: { contains: query, mode: 'insensitive' } },
+      ],
     },
     select: { id: true, name: true, email: true },
     take: 20,
@@ -156,6 +175,24 @@ export async function getPendingRequests(userId: string) {
     },
   });
   return requests.map(r => ({ ...r.user, requestId: r.id }));
+}
+
+export async function removeFriend(userId: string, friendId: string) {
+  const friendship = await prisma.friendship.findFirst({
+    where: {
+      status: 'ACCEPTED',
+      OR: [
+        { userId, friendId },
+        { userId: friendId, friendId: userId },
+      ],
+    },
+  });
+
+  if (!friendship) {
+    throw Object.assign(new Error('Friendship not found'), { status: 404 });
+  }
+
+  await prisma.friendship.delete({ where: { id: friendship.id } });
 }
 
 export async function getFriends(userId: string) {

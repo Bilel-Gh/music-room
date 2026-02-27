@@ -13,6 +13,11 @@ export async function createPlaylist(req: Request, res: Response, next: NextFunc
   try {
     const playlist = await playlistService.createPlaylist(req.body, req.user!.userId);
     res.status(201).json({ success: true, data: playlist });
+
+    const io = getIO();
+    if (io && playlist.isPublic !== false) {
+      io.emit('playlistCreated', { playlist });
+    }
   } catch (err) {
     next(err);
   }
@@ -30,6 +35,15 @@ export async function getPlaylist(req: Request, res: Response, next: NextFunctio
 export async function listPlaylists(_req: Request, res: Response, next: NextFunction) {
   try {
     const playlists = await playlistService.listPlaylists();
+    res.json({ success: true, data: playlists });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listMyPlaylists(req: Request, res: Response, next: NextFunction) {
+  try {
+    const playlists = await playlistService.listMyPlaylists(req.user!.userId);
     res.json({ success: true, data: playlists });
   } catch (err) {
     next(err);

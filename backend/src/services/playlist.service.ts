@@ -83,6 +83,19 @@ export async function listPlaylists() {
   });
 }
 
+export async function listMyPlaylists(userId: string) {
+  return prisma.playlist.findMany({
+    where: {
+      members: { some: { userId } },
+    },
+    include: {
+      creator: { select: { id: true, name: true } },
+      _count: { select: { members: true, tracks: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export async function updatePlaylist(playlistId: string, userId: string, data: UpdatePlaylistInput) {
   const playlist = await prisma.playlist.findUnique({ where: { id: playlistId } });
   if (!playlist) {

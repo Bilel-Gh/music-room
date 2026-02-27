@@ -1,8 +1,18 @@
 import { io, Socket } from 'socket.io-client';
+import { useAuthStore } from '../store/authStore';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 
 let socket: Socket | null = null;
+
+// Listeners for notification badge
+type FriendRequestListener = (data: { from: { id: string; name: string; email: string } }) => void;
+const friendRequestListeners: Set<FriendRequestListener> = new Set();
+
+export function onFriendRequest(listener: FriendRequestListener) {
+  friendRequestListeners.add(listener);
+  return () => { friendRequestListeners.delete(listener); };
+}
 
 export function getSocket(): Socket {
   if (!socket) {
@@ -13,6 +23,11 @@ export function getSocket(): Socket {
 
     socket.on('connect', () => {
       console.log('[Socket.io] Connected:', socket?.id);
+      // Join user-specific room for notifications
+      const userId = useAuthStore.getState().userId;
+      if (userId) {
+        socket?.emit('authenticate', userId);
+      }
     });
 
     socket.on('connect_error', (err) => {
@@ -21,6 +36,10 @@ export function getSocket(): Socket {
 
     socket.on('disconnect', (reason) => {
       console.log('[Socket.io] Disconnected:', reason);
+    });
+
+    socket.on('friendRequestReceived', (data) => {
+      friendRequestListeners.forEach(listener => listener(data));
     });
   }
   return socket;

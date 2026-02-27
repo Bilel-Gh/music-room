@@ -30,6 +30,20 @@ router.get('/', playlistController.listPlaylists);
 
 /**
  * @swagger
+ * /playlists/me:
+ *   get:
+ *     summary: Mes playlists (creees ou rejointes)
+ *     tags: [Playlists]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Liste des playlists de l'utilisateur
+ */
+router.get('/me', playlistController.listMyPlaylists);
+
+/**
+ * @swagger
  * /playlists:
  *   post:
  *     summary: Creer une playlist
