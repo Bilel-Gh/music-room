@@ -10,12 +10,18 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as WebBrowser from 'expo-web-browser';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 
 interface UserProfile {
   name: string;
   email: string;
+  emailVerified: boolean;
+  googleId: string | null;
   publicInfo: string | null;
   friendsInfo: string | null;
   privateInfo: string | null;
@@ -33,6 +39,7 @@ function getInitials(name: string): string {
 }
 
 export default function ProfileScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,6 +52,7 @@ export default function ProfileScreen() {
   const [musicPrefs, setMusicPrefs] = useState('');
 
   const logout = useAuthStore((s) => s.logout);
+  const email = useAuthStore((s) => s.email);
 
   useEffect(() => {
     fetchProfile();
@@ -111,6 +119,25 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleLinkGoogle = async () => {
+    try {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+      const result = await WebBrowser.openAuthSessionAsync(
+        `${apiUrl}/api/auth/google?platform=mobile`,
+        'musicroom://auth/callback',
+      );
+
+      if (result.type === 'success' && result.url) {
+        // Google OAuth succeeded — the backend already linked the account
+        // Refresh profile to reflect the change
+        await fetchProfile();
+        Alert.alert('Succes', 'Compte Google lie');
+      }
+    } catch {
+      Alert.alert('Erreur', 'Impossible de lier le compte Google');
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert('Deconnexion', 'Voulez-vous vous deconnecter ?', [
       { text: 'Annuler', style: 'cancel' },
@@ -141,6 +168,18 @@ export default function ProfileScreen() {
             <Text style={styles.profileName}>{profile.name}</Text>
             <Text style={styles.email}>{profile.email}</Text>
           </View>
+
+          {/* Email verification banner */}
+          {profile.emailVerified === false && (
+            <TouchableOpacity
+              style={styles.verifyBanner}
+              onPress={() => email && navigation.navigate('EmailVerification', { email })}
+            >
+              <Text style={styles.verifyBannerText}>
+                Email non verifie — Appuyez pour verifier
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Info cards */}
           {profile.publicInfo ? (
@@ -181,6 +220,18 @@ export default function ProfileScreen() {
             <Text style={styles.editButtonText}>Modifier le profil</Text>
           </TouchableOpacity>
 
+          {!profile.googleId && (
+            <TouchableOpacity style={styles.googleLinkButton} onPress={handleLinkGoogle}>
+              <Text style={styles.googleLinkText}>Lier un compte Google</Text>
+            </TouchableOpacity>
+          )}
+
+          {profile.googleId && (
+            <View style={styles.googleLinkedBadge}>
+              <Text style={styles.googleLinkedText}>Compte Google lie</Text>
+            </View>
+          )}
+
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutText}>Se deconnecter</Text>
           </TouchableOpacity>
@@ -199,36 +250,40 @@ export default function ProfileScreen() {
         <TextInput style={styles.input} value={name} onChangeText={setName} />
 
         <Text style={styles.label}>Info publique</Text>
+        <Text style={styles.visibilityHint}>Visible par tous les utilisateurs</Text>
         <TextInput
           style={[styles.input, styles.multiline]}
           value={publicInfo}
           onChangeText={setPublicInfo}
-          placeholder="Visible par tout le monde"
+          placeholder="Bio, centre d'interets..."
           placeholderTextColor="#bbb"
           multiline
         />
 
         <Text style={styles.label}>Info amis uniquement</Text>
+        <Text style={styles.visibilityHint}>Visible par vos amis uniquement</Text>
         <TextInput
           style={[styles.input, styles.multiline]}
           value={friendsInfo}
           onChangeText={setFriendsInfo}
-          placeholder="Visible par vos amis"
+          placeholder="Infos reservees a vos amis..."
           placeholderTextColor="#bbb"
           multiline
         />
 
         <Text style={styles.label}>Info privee</Text>
+        <Text style={styles.visibilityHint}>Visible par vous uniquement</Text>
         <TextInput
           style={[styles.input, styles.multiline]}
           value={privateInfo}
           onChangeText={setPrivateInfo}
-          placeholder="Visible uniquement par vous"
+          placeholder="Notes personnelles..."
           placeholderTextColor="#bbb"
           multiline
         />
 
         <Text style={styles.label}>Preferences musicales</Text>
+        <Text style={styles.visibilityHint}>Visible par tous — Separez par des virgules (ex: Rock, Jazz, Hip-hop)</Text>
         <TextInput
           style={styles.input}
           value={musicPrefs}
@@ -236,7 +291,6 @@ export default function ProfileScreen() {
           placeholder="jazz, rock, electro..."
           placeholderTextColor="#bbb"
         />
-        <Text style={styles.hint}>Separez par des virgules</Text>
 
         <View style={styles.editActions}>
           <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel}>
@@ -358,6 +412,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  googleLinkButton: {
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+  },
+  googleLinkText: {
+    color: '#333',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  googleLinkedBadge: {
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 12,
+    backgroundColor: '#ecfdf5',
+  },
+  googleLinkedText: {
+    color: '#065f46',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   logoutButton: {
     padding: 16,
     borderRadius: 10,
@@ -392,10 +472,23 @@ const styles = StyleSheet.create({
     minHeight: 60,
     textAlignVertical: 'top',
   },
-  hint: {
+  visibilityHint: {
     fontSize: 12,
-    color: '#aaa',
-    marginTop: 4,
+    color: '#999',
+    marginBottom: 6,
+    fontStyle: 'italic',
+  },
+  verifyBanner: {
+    backgroundColor: '#fef3c7',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 14,
+    alignItems: 'center',
+  },
+  verifyBannerText: {
+    color: '#92400e',
+    fontSize: 13,
+    fontWeight: '600',
   },
   editActions: {
     flexDirection: 'row',

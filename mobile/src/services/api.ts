@@ -1,4 +1,7 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { useAuthStore } from '../store/authStore';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
@@ -8,12 +11,17 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor : ajoute le token JWT a chaque requete
+// Interceptor : ajoute le token JWT + metadata device a chaque requete
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  config.headers['X-Platform'] = Platform.OS;
+  config.headers['X-Device'] = Device.modelName || 'unknown';
+  config.headers['X-App-Version'] = Constants.expoConfig?.version || '1.0.0';
+
   return config;
 });
 

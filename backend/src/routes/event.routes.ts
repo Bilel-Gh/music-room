@@ -86,6 +86,20 @@ router.get('/me', eventController.listMyEvents);
 
 /**
  * @swagger
+ * /events/invitations:
+ *   get:
+ *     summary: Lister mes invitations en attente
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Liste des invitations
+ */
+router.get('/invitations', eventController.listPendingInvitations);
+
+/**
+ * @swagger
  * /events/{id}:
  *   get:
  *     summary: Détails d'un événement
@@ -184,6 +198,50 @@ router.delete('/:id', eventController.deleteEvent);
  *       409:
  *         description: Déjà membre
  */
+/**
+ * @swagger
+ * /events/{id}/accept:
+ *   post:
+ *     summary: Accepter une invitation
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Invitation acceptee
+ *       404:
+ *         description: Pas d'invitation en attente
+ */
+router.post('/:id/accept', eventController.acceptInvitation);
+
+/**
+ * @swagger
+ * /events/{id}/reject:
+ *   delete:
+ *     summary: Refuser une invitation
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       204:
+ *         description: Invitation refusee
+ *       404:
+ *         description: Pas d'invitation en attente
+ */
+router.delete('/:id/reject', eventController.rejectInvitation);
+
 router.post('/:id/join', eventController.joinEvent);
 
 /**

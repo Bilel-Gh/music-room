@@ -7,19 +7,21 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Modal,
-  TextInput,
   Alert,
-  Keyboard,
-  TouchableWithoutFeedback,
   Animated,
   PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
+import { RootStackParamList, TabParamList } from '../navigation/AppNavigator';
+
+type HomeNavProp = CompositeNavigationProp<
+  BottomTabNavigationProp<TabParamList, 'Home'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { getSocket, connectSocket } from '../services/socket';
@@ -44,63 +46,49 @@ interface Playlist {
 
 type FeedMode = 'public' | 'mine';
 
-const SWIPE_THRESHOLD = -70;
-
 function SwipeableCard({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
   const translateX = useRef(new Animated.Value(0)).current;
-  const isOpen = useRef(false);
+  const openRef = useRef(false);
+  const gestureStartX = useRef(0);
 
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+      onMoveShouldSetPanResponder: (_, gesture) => {
+        // Only capture horizontal swipes, ignore vertical scrolling
+        return Math.abs(gesture.dx) > 15 && Math.abs(gesture.dy) < 10;
+      },
+      onPanResponderGrant: () => {
+        gestureStartX.current = openRef.current ? -80 : 0;
+      },
       onPanResponderMove: (_, gesture) => {
-        // Starting from open or closed position
-        const base = isOpen.current ? -90 : 0;
-        const newVal = Math.min(0, Math.max(-90, base + gesture.dx));
-        translateX.setValue(newVal);
+        const val = Math.min(0, Math.max(-80, gestureStartX.current + gesture.dx));
+        translateX.setValue(val);
       },
       onPanResponderRelease: (_, gesture) => {
-        const base = isOpen.current ? -90 : 0;
-        const final = base + gesture.dx;
-
-        if (final < SWIPE_THRESHOLD) {
-          // Open
-          isOpen.current = true;
-          Animated.spring(translateX, {
-            toValue: -90,
-            useNativeDriver: true,
-            bounciness: 0,
-          }).start();
+        const destination = gestureStartX.current + gesture.dx;
+        if (destination < -40) {
+          openRef.current = true;
+          Animated.spring(translateX, { toValue: -80, useNativeDriver: true, speed: 20, bounciness: 4 }).start();
         } else {
-          // Close
-          isOpen.current = false;
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            bounciness: 0,
-          }).start();
+          openRef.current = false;
+          Animated.spring(translateX, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 4 }).start();
         }
       },
     })
   ).current;
 
-  const handleDelete = () => {
-    // Close the swipe first, then trigger delete
-    isOpen.current = false;
-    Animated.timing(translateX, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-    onDelete();
-  };
-
   return (
     <View style={styles.swipeContainer}>
-      <TouchableOpacity style={styles.deleteBackground} onPress={handleDelete} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={styles.deleteBackground}
+        onPress={() => {
+          openRef.current = false;
+          Animated.timing(translateX, { toValue: 0, duration: 150, useNativeDriver: true }).start();
+          onDelete();
+        }}
+        activeOpacity={0.8}
+      >
         <Ionicons name="trash-outline" size={22} color="#fff" />
-        <Text style={styles.deleteBackgroundText}>Supprimer</Text>
       </TouchableOpacity>
       <Animated.View
         style={{ transform: [{ translateX }], backgroundColor: '#f5f5f5' }}
@@ -113,7 +101,7 @@ function SwipeableCard({ children, onDelete }: { children: React.ReactNode; onDe
 }
 
 export default function HomeScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<HomeNavProp>();
   const userId = useAuthStore(s => s.userId);
   const [events, setEvents] = useState<Event[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -121,10 +109,6 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'events' | 'playlists'>('events');
   const [feedMode, setFeedMode] = useState<FeedMode>('public');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<'event' | 'playlist'>('event');
-  const [newName, setNewName] = useState('');
-  const [creating, setCreating] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -188,47 +172,6 @@ export default function HomeScreen() {
     if (mode === feedMode) return;
     setFeedMode(mode);
     setLoading(true);
-  };
-
-  const openCreateModal = (type: 'event' | 'playlist') => {
-    setModalType(type);
-    setNewName('');
-    setModalVisible(true);
-  };
-
-  const handleCreate = async () => {
-    if (!newName.trim()) {
-      Alert.alert('Erreur', 'Le nom est requis');
-      return;
-    }
-
-    Keyboard.dismiss();
-    setCreating(true);
-    try {
-      const endpoint = modalType === 'event' ? '/events' : '/playlists';
-      const { data } = await api.post(endpoint, {
-        name: newName.trim(),
-        isPublic: true,
-        licenseType: 'OPEN',
-      });
-
-      setModalVisible(false);
-      setNewName('');
-      await fetchData();
-
-      const created = data.data;
-      if (modalType === 'event') {
-        navigation.navigate('Event', { eventId: created.id });
-      } else {
-        navigation.navigate('Playlist', { playlistId: created.id });
-      }
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible de creer';
-      Alert.alert('Erreur', msg);
-    } finally {
-      setCreating(false);
-    }
   };
 
   const handleDeleteEvent = (eventId: string, name: string) => {
@@ -414,7 +357,7 @@ export default function HomeScreen() {
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListHeaderComponent={
-            <TouchableOpacity style={styles.createButton} onPress={() => openCreateModal('event')}>
+            <TouchableOpacity style={styles.createButton} onPress={() => navigation.navigate('CreateEvent')}>
               <Text style={styles.createButtonText}>+ Nouvel evenement</Text>
             </TouchableOpacity>
           }
@@ -430,7 +373,7 @@ export default function HomeScreen() {
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListHeaderComponent={
-            <TouchableOpacity style={styles.createButton} onPress={() => openCreateModal('playlist')}>
+            <TouchableOpacity style={styles.createButton} onPress={() => navigation.navigate('CreatePlaylist')}>
               <Text style={styles.createButtonText}>+ Nouvelle playlist</Text>
             </TouchableOpacity>
           }
@@ -440,54 +383,6 @@ export default function HomeScreen() {
         />
       )}
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  {modalType === 'event' ? 'Nouvel evenement' : 'Nouvelle playlist'}
-                </Text>
-                <TextInput
-                  style={styles.modalInput}
-                  placeholder="Nom"
-                  placeholderTextColor="#999"
-                  value={newName}
-                  onChangeText={setNewName}
-                  autoFocus
-                  multiline={false}
-                  returnKeyType="done"
-                  onSubmitEditing={handleCreate}
-                />
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={() => setModalVisible(false)}
-                  >
-                    <Text style={styles.cancelButtonText}>Annuler</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.submitButton, creating && styles.buttonDisabled]}
-                    onPress={handleCreate}
-                    disabled={creating}
-                  >
-                    {creating ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text style={styles.submitButtonText}>Creer</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -618,68 +513,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 22,
-    width: '100%',
-    maxWidth: 360,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 16,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 15,
-    backgroundColor: '#fafafa',
-    color: '#1a1a1a',
-    marginBottom: 18,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-  },
-  cancelButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-  },
-  submitButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#4f46e5',
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   swipeContainer: {
     marginBottom: 12,
     borderRadius: 12,
@@ -690,17 +523,11 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    width: 90,
+    width: 80,
     backgroundColor: '#ef4444',
     justifyContent: 'center',
     alignItems: 'center',
     borderTopRightRadius: 12,
     borderBottomRightRadius: 12,
-    gap: 2,
-  },
-  deleteBackgroundText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
   },
 });

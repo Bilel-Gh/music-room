@@ -11,6 +11,7 @@ import {
   Alert,
   Keyboard,
   Modal,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -34,7 +35,9 @@ interface PlaylistData {
   name: string;
   description: string | null;
   licenseType: string;
+  isPublic: boolean;
   creatorId: string;
+  membership: { canEdit: boolean } | null;
 }
 
 interface Friend {
@@ -59,6 +62,13 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(false);
   const [invitingId, setInvitingId] = useState<string | null>(null);
+  const [inviteCanEdit, setInviteCanEdit] = useState<Record<string, boolean>>({});
+
+  const canEdit = playlist
+    ? playlist.licenseType === 'OPEN' || (playlist.membership?.canEdit === true)
+    : false;
+
+  const isCreator = playlist?.creatorId === userId;
 
   useEffect(() => {
     fetchData();
@@ -94,9 +104,16 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   const openInviteModal = useCallback(async () => {
     setInviteVisible(true);
     setLoadingFriends(true);
+    setInviteCanEdit({});
     try {
       const { data } = await api.get('/users/me/friends');
       setFriends(data.data);
+      // Default all to editor
+      const defaults: Record<string, boolean> = {};
+      for (const f of data.data) {
+        defaults[f.id] = true;
+      }
+      setInviteCanEdit(defaults);
     } catch {
       Alert.alert('Erreur', 'Impossible de charger la liste d\'amis');
     } finally {
@@ -104,27 +121,31 @@ export default function PlaylistScreen({ route, navigation }: Props) {
     }
   }, []);
 
-  // Header: title + actions (delete + invite for creator)
   useEffect(() => {
     if (!playlist) return;
-    const isCreator = playlist.creatorId === userId;
+    if (!isCreator) return;
 
     navigation.setOptions({
       title: playlist.name,
-      ...(isCreator && {
-        headerRight: () => (
-          <View style={{ flexDirection: 'row', gap: 16, marginRight: 4 }}>
-            <TouchableOpacity onPress={openInviteModal}>
-              <Ionicons name="person-add-outline" size={22} color="#4f46e5" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete}>
-              <Ionicons name="trash-outline" size={22} color="#ef4444" />
-            </TouchableOpacity>
-          </View>
-        ),
-      }),
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', gap: 16, marginRight: 4 }}>
+          <TouchableOpacity onPress={openInviteModal}>
+            <Ionicons name="person-add-outline" size={22} color="#4f46e5" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleDelete}>
+            <Ionicons name="trash-outline" size={22} color="#ef4444" />
+          </TouchableOpacity>
+        </View>
+      ),
     });
-  }, [playlist, userId, handleDelete, openInviteModal]);
+  }, [playlist, userId, isCreator, handleDelete, openInviteModal]);
+
+  // Set title for non-creators too
+  useEffect(() => {
+    if (!playlist) return;
+    if (isCreator) return;
+    navigation.setOptions({ title: playlist.name });
+  }, [playlist, isCreator]);
 
   const fetchData = async () => {
     try {
@@ -160,7 +181,10 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   const handleInvite = async (friendId: string) => {
     setInvitingId(friendId);
     try {
-      await api.post(`/playlists/${playlistId}/invite`, { userId: friendId });
+      await api.post(`/playlists/${playlistId}/invite`, {
+        userId: friendId,
+        canEdit: inviteCanEdit[friendId] ?? true,
+      });
       Alert.alert('Succes', 'Invitation envoyee');
       setFriends(prev => prev.filter(f => f.id !== friendId));
     } catch (err: unknown) {
@@ -248,31 +272,33 @@ export default function PlaylistScreen({ route, navigation }: Props) {
           <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
           <Text style={styles.trackArtist} numberOfLines={1}>{item.artist}</Text>
         </View>
-        {isBusy ? (
-          <ActivityIndicator size="small" color="#4f46e5" style={{ marginRight: 8 }} />
-        ) : (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.moveBtn, item.position === 0 && styles.moveBtnDisabled]}
-              onPress={() => handleMove(item.id, item.position, 'up')}
-              disabled={item.position === 0}
-            >
-              <Text style={styles.moveBtnText}>↑</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.moveBtn, item.position === tracks.length - 1 && styles.moveBtnDisabled]}
-              onPress={() => handleMove(item.id, item.position, 'down')}
-              disabled={item.position === tracks.length - 1}
-            >
-              <Text style={styles.moveBtnText}>↓</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.deleteBtn}
-              onPress={() => handleDeleteTrack(item.id)}
-            >
-              <Text style={styles.deleteBtnText}>✕</Text>
-            </TouchableOpacity>
-          </View>
+        {canEdit && (
+          isBusy ? (
+            <ActivityIndicator size="small" color="#4f46e5" style={{ marginRight: 8 }} />
+          ) : (
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.moveBtn, item.position === 0 && styles.moveBtnDisabled]}
+                onPress={() => handleMove(item.id, item.position, 'up')}
+                disabled={item.position === 0}
+              >
+                <Text style={styles.moveBtnText}>↑</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.moveBtn, item.position === tracks.length - 1 && styles.moveBtnDisabled]}
+                onPress={() => handleMove(item.id, item.position, 'down')}
+                disabled={item.position === tracks.length - 1}
+              >
+                <Text style={styles.moveBtnText}>↓</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={() => handleDeleteTrack(item.id)}
+              >
+                <Text style={styles.deleteBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )
         )}
       </View>
     );
@@ -289,46 +315,73 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
+        {/* License badge */}
+        <View style={styles.headerInfo}>
+          <View style={[styles.licenseBadge,
+            playlist?.licenseType === 'OPEN' ? styles.lbOpen : styles.lbInvite
+          ]}>
+            <Text style={styles.licenseBadgeText}>
+              {playlist?.licenseType === 'OPEN' ? 'Ouvert' : 'Sur invitation'}
+            </Text>
+          </View>
+          {!playlist?.isPublic && (
+            <View style={styles.privateBadge}>
+              <Text style={styles.privateBadgeText}>Prive</Text>
+            </View>
+          )}
+        </View>
+
         {playlist?.description ? (
           <Text style={styles.description}>{playlist.description}</Text>
         ) : null}
 
-        <View style={styles.addForm}>
-          <Text style={styles.formTitle}>Ajouter une track</Text>
-          <View style={styles.formRow}>
-            <TextInput
-              style={[styles.formInput, { flex: 1, marginRight: 8 }]}
-              placeholder="Titre"
-              placeholderTextColor="#999"
-              value={title}
-              onChangeText={setTitle}
-              multiline={false}
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-            />
-            <TextInput
-              style={[styles.formInput, { flex: 1 }]}
-              placeholder="Artiste"
-              placeholderTextColor="#999"
-              value={artist}
-              onChangeText={setArtist}
-              multiline={false}
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-            />
+        {/* Read-only message for viewers */}
+        {!canEdit && playlist?.licenseType === 'INVITE_ONLY' && (
+          <View style={styles.readOnlyBanner}>
+            <Ionicons name="eye-outline" size={16} color="#1e40af" />
+            <Text style={styles.readOnlyText}>Lecture seule — vous ne pouvez pas modifier cette playlist</Text>
           </View>
-          <TouchableOpacity
-            style={[styles.addButton, adding && styles.buttonDisabled]}
-            onPress={handleAddTrack}
-            disabled={adding}
-          >
-            {adding ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.addButtonText}>Ajouter</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        )}
+
+        {/* Add track form - only for editors */}
+        {canEdit && (
+          <View style={styles.addForm}>
+            <Text style={styles.formTitle}>Ajouter une track</Text>
+            <View style={styles.formRow}>
+              <TextInput
+                style={[styles.formInput, { flex: 1, marginRight: 8 }]}
+                placeholder="Titre"
+                placeholderTextColor="#999"
+                value={title}
+                onChangeText={setTitle}
+                multiline={false}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+              <TextInput
+                style={[styles.formInput, { flex: 1 }]}
+                placeholder="Artiste"
+                placeholderTextColor="#999"
+                value={artist}
+                onChangeText={setArtist}
+                multiline={false}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+            </View>
+            <TouchableOpacity
+              style={[styles.addButton, adding && styles.buttonDisabled]}
+              onPress={handleAddTrack}
+              disabled={adding}
+            >
+              {adding ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.addButtonText}>Ajouter</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         <Text style={styles.sectionTitle}>
           Tracks ({tracks.length})
@@ -345,7 +398,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
           }
         />
 
-        {/* Invite modal */}
+        {/* Invite modal with canEdit toggle */}
         <Modal
           visible={inviteVisible}
           transparent
@@ -375,6 +428,18 @@ export default function PlaylistScreen({ route, navigation }: Props) {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.friendName}>{friend.name}</Text>
                         <Text style={styles.friendEmail}>{friend.email}</Text>
+                        <View style={styles.permRow}>
+                          <Text style={styles.permLabel}>
+                            {inviteCanEdit[friend.id] ? 'Editeur' : 'Lecteur'}
+                          </Text>
+                          <Switch
+                            value={inviteCanEdit[friend.id] ?? true}
+                            onValueChange={(val) =>
+                              setInviteCanEdit(prev => ({ ...prev, [friend.id]: val }))
+                            }
+                            trackColor={{ true: '#4f46e5', false: '#ddd' }}
+                          />
+                        </View>
                       </View>
                       <TouchableOpacity
                         style={[styles.inviteBtn, invitingId === friend.id && styles.buttonDisabled]}
@@ -409,12 +474,59 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerInfo: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    gap: 8,
+  },
+  licenseBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  lbOpen: {
+    backgroundColor: '#dcfce7',
+  },
+  lbInvite: {
+    backgroundColor: '#fef3c7',
+  },
+  licenseBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  privateBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#f3e8ff',
+  },
+  privateBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b21a8',
+  },
   description: {
     fontSize: 14,
     color: '#666',
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 4,
+  },
+  readOnlyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dbeafe',
+    margin: 12,
+    padding: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  readOnlyText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#1e40af',
   },
   addForm: {
     backgroundColor: '#fff',
@@ -594,6 +706,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#888',
     marginTop: 2,
+  },
+  permRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  permLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
   inviteBtn: {
     backgroundColor: '#4f46e5',

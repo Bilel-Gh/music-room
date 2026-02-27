@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/authStore';
@@ -42,6 +43,16 @@ export default function RegisterScreen({ navigation }: Props) {
         password,
       });
       await setTokens(data.data.accessToken, data.data.refreshToken);
+      // Navigate to email verification after the auth stack switches
+      setTimeout(() => {
+        navigation.reset({
+          index: 1,
+          routes: [
+            { name: 'MainTabs' },
+            { name: 'EmailVerification', params: { email: email.trim() } },
+          ],
+        });
+      }, 100);
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { error?: string } } }).response?.data?.error ||
@@ -52,8 +63,27 @@ export default function RegisterScreen({ navigation }: Props) {
     }
   };
 
-  const handleGoogleRegister = () => {
-    Alert.alert('Google OAuth', 'OAuth Google necessite une configuration native Expo specifique.');
+  const handleGoogleRegister = async () => {
+    try {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+      const result = await WebBrowser.openAuthSessionAsync(
+        `${apiUrl}/api/auth/google?platform=mobile`,
+        'musicroom://auth/callback',
+      );
+
+      if (result.type === 'success' && result.url) {
+        const url = new URL(result.url);
+        const accessToken = url.searchParams.get('accessToken');
+        const refreshToken = url.searchParams.get('refreshToken');
+        if (accessToken && refreshToken) {
+          await setTokens(accessToken, refreshToken);
+        } else {
+          Alert.alert('Erreur', 'Tokens manquants dans la reponse Google');
+        }
+      }
+    } catch {
+      Alert.alert('Erreur', 'Impossible de se connecter avec Google');
+    }
   };
 
   return (

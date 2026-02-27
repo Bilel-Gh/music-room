@@ -75,8 +75,15 @@ export function googleCallback(req: Request, res: Response, next: NextFunction) 
   try {
     const user = req.user!;
     const tokens = authService.generateTokensForUser({ id: user.userId, email: user.email });
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    res.redirect(`${clientUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
+
+    // Mobile clients pass state=mobile via the OAuth flow
+    const isMobile = req.query.state === 'mobile';
+    if (isMobile) {
+      res.redirect(`musicroom://auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
+    } else {
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      res.redirect(`${clientUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
+    }
   } catch (err) {
     next(err);
   }

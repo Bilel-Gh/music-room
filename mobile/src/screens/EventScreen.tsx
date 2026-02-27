@@ -13,6 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/authStore';
@@ -34,7 +35,9 @@ interface EventData {
   name: string;
   description: string | null;
   licenseType: string;
+  isPublic: boolean;
   creatorId: string;
+  membership: { role: string } | null;
 }
 
 interface Friend {
@@ -59,6 +62,10 @@ export default function EventScreen({ route, navigation }: Props) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(false);
   const [invitingId, setInvitingId] = useState<string | null>(null);
+
+  const canParticipate = event
+    ? event.licenseType === 'OPEN' || event.licenseType === 'LOCATION_TIME' || event.membership !== null
+    : false;
 
   useEffect(() => {
     fetchData();
@@ -103,7 +110,6 @@ export default function EventScreen({ route, navigation }: Props) {
     }
   }, []);
 
-  // Header actions (delete + invite for creator)
   useEffect(() => {
     if (!event) return;
     const isCreator = event.creatorId === userId;
@@ -199,10 +205,21 @@ export default function EventScreen({ route, navigation }: Props) {
   const handleVote = async (trackId: string) => {
     setVotingId(trackId);
     try {
-      await api.post(`/events/${eventId}/tracks/${trackId}/vote`, {
-        latitude: 48.85,
-        longitude: 2.35,
-      });
+      const body: Record<string, number> = {};
+
+      if (event?.licenseType === 'LOCATION_TIME') {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Erreur', 'La localisation est requise pour voter dans cet evenement');
+          setVotingId(null);
+          return;
+        }
+        const loc = await Location.getCurrentPositionAsync({});
+        body.latitude = loc.coords.latitude;
+        body.longitude = loc.coords.longitude;
+      }
+
+      await api.post(`/events/${eventId}/tracks/${trackId}/vote`, body);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible de voter';
@@ -221,20 +238,28 @@ export default function EventScreen({ route, navigation }: Props) {
         <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
         <Text style={styles.trackArtist} numberOfLines={1}>{item.artist}</Text>
       </View>
-      <TouchableOpacity
-        style={styles.voteButton}
-        onPress={() => handleVote(item.id)}
-        disabled={votingId === item.id}
-      >
-        {votingId === item.id ? (
-          <ActivityIndicator size="small" color="#4f46e5" />
-        ) : (
-          <>
-            <Text style={styles.voteCount}>{item.voteCount}</Text>
-            <Text style={styles.voteLabel}>Vote</Text>
-          </>
-        )}
-      </TouchableOpacity>
+      {canParticipate && (
+        <TouchableOpacity
+          style={styles.voteButton}
+          onPress={() => handleVote(item.id)}
+          disabled={votingId === item.id}
+        >
+          {votingId === item.id ? (
+            <ActivityIndicator size="small" color="#4f46e5" />
+          ) : (
+            <>
+              <Text style={styles.voteCount}>{item.voteCount}</Text>
+              <Text style={styles.voteLabel}>Vote</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+      {!canParticipate && (
+        <View style={styles.voteButton}>
+          <Text style={styles.voteCount}>{item.voteCount}</Text>
+          <Text style={[styles.voteLabel, { color: '#999' }]}>votes</Text>
+        </View>
+      )}
     </View>
   );
 
@@ -249,46 +274,77 @@ export default function EventScreen({ route, navigation }: Props) {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
+        {/* License badge + description */}
+        <View style={styles.headerInfo}>
+          <View style={[styles.licenseBadge,
+            event?.licenseType === 'OPEN' ? styles.badgeOpen :
+            event?.licenseType === 'INVITE_ONLY' ? styles.badgeInvite : styles.badgeLocation
+          ]}>
+            <Text style={styles.licenseBadgeText}>
+              {event?.licenseType === 'OPEN' ? 'Ouvert' :
+               event?.licenseType === 'INVITE_ONLY' ? 'Sur invitation' : 'Lieu + Horaire'}
+            </Text>
+          </View>
+          {!event?.isPublic && (
+            <View style={styles.privateBadge}>
+              <Text style={styles.privateBadgeText}>Prive</Text>
+            </View>
+          )}
+        </View>
+
         {event?.description ? (
           <Text style={styles.description}>{event.description}</Text>
         ) : null}
 
-        <View style={styles.addForm}>
-          <Text style={styles.formTitle}>Ajouter une track</Text>
-          <View style={styles.formRow}>
-            <TextInput
-              style={[styles.formInput, { flex: 1, marginRight: 8 }]}
-              placeholder="Titre"
-              placeholderTextColor="#999"
-              value={title}
-              onChangeText={setTitle}
-              multiline={false}
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-            />
-            <TextInput
-              style={[styles.formInput, { flex: 1 }]}
-              placeholder="Artiste"
-              placeholderTextColor="#999"
-              value={artist}
-              onChangeText={setArtist}
-              multiline={false}
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-            />
+        {/* Permission message for INVITE_ONLY non-members */}
+        {!canParticipate && event?.licenseType === 'INVITE_ONLY' && (
+          <View style={styles.restrictedBanner}>
+            <Ionicons name="lock-closed-outline" size={16} color="#92400e" />
+            <Text style={styles.restrictedText}>
+              Evenement sur invitation — vous pouvez voir les tracks mais pas voter ni en ajouter
+            </Text>
           </View>
-          <TouchableOpacity
-            style={[styles.addButton, adding && styles.buttonDisabled]}
-            onPress={handleAddTrack}
-            disabled={adding}
-          >
-            {adding ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.addButtonText}>Ajouter</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        )}
+
+        {/* Add track form - only for participants */}
+        {canParticipate && (
+          <View style={styles.addForm}>
+            <Text style={styles.formTitle}>Ajouter une track</Text>
+            <View style={styles.formRow}>
+              <TextInput
+                style={[styles.formInput, { flex: 1, marginRight: 8 }]}
+                placeholder="Titre"
+                placeholderTextColor="#999"
+                value={title}
+                onChangeText={setTitle}
+                multiline={false}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+              <TextInput
+                style={[styles.formInput, { flex: 1 }]}
+                placeholder="Artiste"
+                placeholderTextColor="#999"
+                value={artist}
+                onChangeText={setArtist}
+                multiline={false}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+            </View>
+            <TouchableOpacity
+              style={[styles.addButton, adding && styles.buttonDisabled]}
+              onPress={handleAddTrack}
+              disabled={adding}
+            >
+              {adding ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.addButtonText}>Ajouter</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         <Text style={styles.sectionTitle}>
           Tracklist ({tracks.length})
@@ -369,12 +425,62 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerInfo: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    gap: 8,
+  },
+  licenseBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeOpen: {
+    backgroundColor: '#dcfce7',
+  },
+  badgeInvite: {
+    backgroundColor: '#fef3c7',
+  },
+  badgeLocation: {
+    backgroundColor: '#dbeafe',
+  },
+  licenseBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  privateBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#f3e8ff',
+  },
+  privateBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b21a8',
+  },
   description: {
     fontSize: 14,
     color: '#666',
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 4,
+  },
+  restrictedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    margin: 12,
+    padding: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  restrictedText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#92400e',
   },
   addForm: {
     backgroundColor: '#fff',

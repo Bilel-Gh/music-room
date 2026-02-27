@@ -20,7 +20,7 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
 
 export async function getEvent(req: Request, res: Response, next: NextFunction) {
   try {
-    const event = await eventService.getEvent(req.params.id as string);
+    const event = await eventService.getEvent(req.params.id as string, req.user!.userId);
     res.json({ success: true, data: event });
   } catch (err) {
     next(err);
@@ -111,6 +111,33 @@ export async function getEventTracks(req: Request, res: Response, next: NextFunc
   try {
     const tracks = await eventService.getEventTracks(req.params.id as string);
     res.json({ success: true, data: tracks });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listPendingInvitations(req: Request, res: Response, next: NextFunction) {
+  try {
+    const invitations = await eventService.listPendingInvitations(req.user!.userId);
+    res.json({ success: true, data: invitations });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function acceptInvitation(req: Request, res: Response, next: NextFunction) {
+  try {
+    const member = await eventService.acceptInvitation(req.params.id as string, req.user!.userId);
+    res.json({ success: true, data: member });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function rejectInvitation(req: Request, res: Response, next: NextFunction) {
+  try {
+    await eventService.rejectInvitation(req.params.id as string, req.user!.userId);
+    res.status(204).send();
   } catch (err) {
     next(err);
   }

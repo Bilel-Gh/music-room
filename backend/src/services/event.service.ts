@@ -17,7 +17,7 @@ export async function createEvent(data: CreateEventInput, userId: string) {
   return event;
 }
 
-export async function getEvent(eventId: string) {
+export async function getEvent(eventId: string, userId?: string) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
@@ -30,7 +30,17 @@ export async function getEvent(eventId: string) {
     throw Object.assign(new Error('Event not found'), { status: 404 });
   }
 
-  return event;
+  let membership = null;
+  if (userId) {
+    const member = await prisma.eventMember.findUnique({
+      where: { eventId_userId: { eventId, userId } },
+    });
+    if (member) {
+      membership = { role: member.role };
+    }
+  }
+
+  return { ...event, membership };
 }
 
 export async function listEvents() {
@@ -47,7 +57,7 @@ export async function listEvents() {
 export async function listMyEvents(userId: string) {
   return prisma.event.findMany({
     where: {
-      members: { some: { userId } },
+      members: { some: { userId, role: { not: 'INVITED' } } },
     },
     include: {
       creator: { select: { id: true, name: true } },
@@ -55,6 +65,50 @@ export async function listMyEvents(userId: string) {
     },
     orderBy: { createdAt: 'desc' },
   });
+}
+
+export async function listPendingInvitations(userId: string) {
+  const memberships = await prisma.eventMember.findMany({
+    where: { userId, role: 'INVITED' },
+    include: {
+      event: {
+        include: {
+          creator: { select: { id: true, name: true } },
+        },
+      },
+    },
+    orderBy: { joinedAt: 'desc' },
+  });
+
+  return memberships.map(m => ({
+    invitationId: m.id,
+    event: m.event,
+  }));
+}
+
+export async function acceptInvitation(eventId: string, userId: string) {
+  const member = await prisma.eventMember.findUnique({
+    where: { eventId_userId: { eventId, userId } },
+  });
+  if (!member || member.role !== 'INVITED') {
+    throw Object.assign(new Error('No pending invitation'), { status: 404 });
+  }
+
+  return prisma.eventMember.update({
+    where: { id: member.id },
+    data: { role: 'PARTICIPANT' },
+  });
+}
+
+export async function rejectInvitation(eventId: string, userId: string) {
+  const member = await prisma.eventMember.findUnique({
+    where: { eventId_userId: { eventId, userId } },
+  });
+  if (!member || member.role !== 'INVITED') {
+    throw Object.assign(new Error('No pending invitation'), { status: 404 });
+  }
+
+  await prisma.eventMember.delete({ where: { id: member.id } });
 }
 
 export async function updateEvent(eventId: string, userId: string, data: UpdateEventInput) {
@@ -174,6 +228,6 @@ export async function getEventTracks(eventId: string) {
       addedBy: { select: { id: true, name: true } },
       _count: { select: { votes: true } },
     },
-    orderBy: { voteCount: 'desc' },
+    orderBy: [{ voteCount: 'desc' }, { createdAt: 'asc' }],
   });
 }

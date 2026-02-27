@@ -24,6 +24,17 @@ interface PendingRequest {
   requestId: string;
 }
 
+interface EventInvitation {
+  invitationId: string;
+  event: {
+    id: string;
+    name: string;
+    description: string | null;
+    licenseType: string;
+    creator: { id: string; name: string };
+  };
+}
+
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
 }
@@ -31,17 +42,17 @@ function getInitials(name: string): string {
 export default function NotificationsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [requests, setRequests] = useState<PendingRequest[]>([]);
+  const [invitations, setInvitations] = useState<EventInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      loadRequests();
+      loadAll();
     }, [])
   );
 
-  // Real-time: prepend new requests
   useEffect(() => {
     const unsub = onFriendRequest((data) => {
       const newReq: PendingRequest = {
@@ -58,10 +69,14 @@ export default function NotificationsScreen() {
     return unsub;
   }, []);
 
-  const loadRequests = async () => {
+  const loadAll = async () => {
     try {
-      const { data } = await api.get('/users/friend-requests/pending');
-      setRequests(data.data);
+      const [friendRes, inviteRes] = await Promise.all([
+        api.get('/users/friend-requests/pending'),
+        api.get('/events/invitations'),
+      ]);
+      setRequests(friendRes.data.data);
+      setInvitations(inviteRes.data.data);
     } catch {
       // silent
     } finally {
@@ -72,11 +87,11 @@ export default function NotificationsScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadRequests();
+    loadAll();
   }, []);
 
-  const handleAccept = async (friendId: string) => {
-    setBusyId(friendId);
+  const handleAcceptFriend = async (friendId: string) => {
+    setBusyId(`friend-${friendId}`);
     try {
       await api.put(`/users/friend-requests/${friendId}/accept`);
       setRequests(prev => prev.filter(r => r.id !== friendId));
@@ -90,11 +105,40 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleReject = async (friendId: string) => {
-    setBusyId(friendId);
+  const handleRejectFriend = async (friendId: string) => {
+    setBusyId(`friend-${friendId}`);
     try {
       await api.delete(`/users/friend-requests/${friendId}/reject`);
       setRequests(prev => prev.filter(r => r.id !== friendId));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        || 'Impossible de refuser';
+      Alert.alert('Erreur', msg);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleAcceptEvent = async (eventId: string) => {
+    setBusyId(`event-${eventId}`);
+    try {
+      await api.post(`/events/${eventId}/accept`);
+      setInvitations(prev => prev.filter(i => i.event.id !== eventId));
+      Alert.alert('Succes', 'Invitation acceptee');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        || 'Impossible d\'accepter';
+      Alert.alert('Erreur', msg);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleRejectEvent = async (eventId: string) => {
+    setBusyId(`event-${eventId}`);
+    try {
+      await api.delete(`/events/${eventId}/reject`);
+      setInvitations(prev => prev.filter(i => i.event.id !== eventId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || 'Impossible de refuser';
@@ -112,57 +156,110 @@ export default function NotificationsScreen() {
     );
   }
 
+  const isEmpty = requests.length === 0 && invitations.length === 0;
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {requests.length === 0 ? (
+        {isEmpty ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-off-outline" size={48} color="#ccc" />
             <Text style={styles.emptyText}>Aucune notification</Text>
           </View>
         ) : (
-          requests.map(req => {
-            const isBusy = busyId === req.id;
-            return (
-              <View key={req.id} style={styles.requestCard}>
-                <TouchableOpacity
-                  style={styles.requestInfo}
-                  onPress={() => navigation.navigate('UserProfile', { userId: req.id })}
-                >
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{getInitials(req.name)}</Text>
-                  </View>
-                  <View style={styles.textBlock}>
-                    <Text style={styles.reqName}>{req.name}</Text>
-                    <Text style={styles.reqEmail}>{req.email}</Text>
-                    <Text style={styles.reqLabel}>Demande d'ami</Text>
-                  </View>
-                </TouchableOpacity>
+          <>
+            {/* Event invitations */}
+            {invitations.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Invitations evenements</Text>
+                {invitations.map(inv => {
+                  const busy = busyId === `event-${inv.event.id}`;
+                  return (
+                    <View key={inv.invitationId} style={styles.requestCard}>
+                      <View style={styles.requestInfo}>
+                        <View style={[styles.avatar, { backgroundColor: '#7c3aed' }]}>
+                          <Ionicons name="musical-notes" size={20} color="#fff" />
+                        </View>
+                        <View style={styles.textBlock}>
+                          <Text style={styles.reqName} numberOfLines={1}>{inv.event.name}</Text>
+                          <Text style={styles.reqEmail}>Par {inv.event.creator.name}</Text>
+                          <Text style={styles.inviteLabel}>Invitation a un evenement</Text>
+                        </View>
+                      </View>
 
-                {isBusy ? (
-                  <ActivityIndicator size="small" color="#4f46e5" />
-                ) : (
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      style={styles.acceptBtn}
-                      onPress={() => handleAccept(req.id)}
-                    >
-                      <Ionicons name="checkmark" size={20} color="#fff" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.rejectBtn}
-                      onPress={() => handleReject(req.id)}
-                    >
-                      <Ionicons name="close" size={20} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            );
-          })
+                      {busy ? (
+                        <ActivityIndicator size="small" color="#4f46e5" />
+                      ) : (
+                        <View style={styles.actionRow}>
+                          <TouchableOpacity
+                            style={styles.acceptBtn}
+                            onPress={() => handleAcceptEvent(inv.event.id)}
+                          >
+                            <Ionicons name="checkmark" size={20} color="#fff" />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.rejectBtn}
+                            onPress={() => handleRejectEvent(inv.event.id)}
+                          >
+                            <Ionicons name="close" size={20} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </>
+            )}
+
+            {/* Friend requests */}
+            {requests.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Demandes d'amis</Text>
+                {requests.map(req => {
+                  const busy = busyId === `friend-${req.id}`;
+                  return (
+                    <View key={req.id} style={styles.requestCard}>
+                      <TouchableOpacity
+                        style={styles.requestInfo}
+                        onPress={() => navigation.navigate('UserProfile', { userId: req.id })}
+                      >
+                        <View style={styles.avatar}>
+                          <Text style={styles.avatarText}>{getInitials(req.name)}</Text>
+                        </View>
+                        <View style={styles.textBlock}>
+                          <Text style={styles.reqName}>{req.name}</Text>
+                          <Text style={styles.reqEmail}>{req.email}</Text>
+                          <Text style={styles.reqLabel}>Demande d'ami</Text>
+                        </View>
+                      </TouchableOpacity>
+
+                      {busy ? (
+                        <ActivityIndicator size="small" color="#4f46e5" />
+                      ) : (
+                        <View style={styles.actionRow}>
+                          <TouchableOpacity
+                            style={styles.acceptBtn}
+                            onPress={() => handleAcceptFriend(req.id)}
+                          >
+                            <Ionicons name="checkmark" size={20} color="#fff" />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.rejectBtn}
+                            onPress={() => handleRejectFriend(req.id)}
+                          >
+                            <Ionicons name="close" size={20} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </>
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -182,6 +279,15 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 40,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#666',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+    marginTop: 8,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -240,6 +346,12 @@ const styles = StyleSheet.create({
   reqLabel: {
     fontSize: 12,
     color: '#6366f1',
+    marginTop: 3,
+    fontWeight: '500',
+  },
+  inviteLabel: {
+    fontSize: 12,
+    color: '#7c3aed',
     marginTop: 3,
     fontWeight: '500',
   },

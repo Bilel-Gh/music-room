@@ -1,0 +1,169 @@
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/AppNavigator';
+import api from '../services/api';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
+
+export default function ForgotPasswordScreen({ navigation }: Props) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSend = async () => {
+    if (!email.trim()) {
+      Alert.alert('Erreur', 'Veuillez entrer votre email');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.post('/auth/forgot-password', { email: email.trim() });
+      setSent(true);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        || 'Impossible d\'envoyer le lien';
+      Alert.alert('Erreur', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (sent) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.inner}>
+          <Text style={styles.title}>Email envoye</Text>
+          <Text style={styles.info}>
+            Si un compte existe avec cet email, un token de reinitialisation a ete genere.
+            Consultez les logs du serveur pour le recuperer.
+          </Text>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate('ResetPassword')}
+          >
+            <Text style={styles.buttonText}>Entrer le token</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.linkText}>Retour a la connexion</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View style={styles.inner}>
+        <Text style={styles.title}>Mot de passe oublie</Text>
+        <Text style={styles.subtitle}>
+          Entrez votre email pour recevoir un token de reinitialisation
+        </Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor="#999"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleSend}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Envoyer</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.linkText}>Retour a la connexion</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  inner: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 30,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+    color: '#1a1a1a',
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 28,
+  },
+  info: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    marginBottom: 14,
+    backgroundColor: '#fafafa',
+    color: '#1a1a1a',
+  },
+  button: {
+    backgroundColor: '#4f46e5',
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  linkText: {
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#4f46e5',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});

@@ -220,7 +220,11 @@ router.put('/link-google', authenticate, validate(linkGoogleSchema), authControl
  *       302:
  *         description: Redirection vers Google
  */
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
+router.get('/google', (req, res, next) => {
+  // Mobile clients pass ?platform=mobile — forward it as OAuth state
+  const state = req.query.platform === 'mobile' ? 'mobile' : undefined;
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false, state })(req, res, next);
+});
 
 /**
  * @swagger

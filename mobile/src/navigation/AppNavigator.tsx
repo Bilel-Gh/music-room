@@ -8,7 +8,12 @@ import { useAuthStore } from '../store/authStore';
 import { connectSocket, onFriendRequest } from '../services/socket';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
+import EmailVerificationScreen from '../screens/EmailVerificationScreen';
 import HomeScreen from '../screens/HomeScreen';
+import CreateEventScreen from '../screens/CreateEventScreen';
+import CreatePlaylistScreen from '../screens/CreatePlaylistScreen';
 import EventScreen from '../screens/EventScreen';
 import PlaylistScreen from '../screens/PlaylistScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -19,7 +24,12 @@ import UserProfileScreen from '../screens/UserProfileScreen';
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: undefined;
+  EmailVerification: { email: string };
   MainTabs: undefined;
+  CreateEvent: undefined;
+  CreatePlaylist: undefined;
   Event: { eventId: string };
   Playlist: { playlistId: string };
   UserProfile: { userId: string };
@@ -38,7 +48,6 @@ const Tab = createBottomTabNavigator<TabParamList>();
 function MainTabs() {
   const [notifCount, setNotifCount] = useState(0);
 
-  // Connect socket and listen for friend requests
   useEffect(() => {
     connectSocket();
     const unsub = onFriendRequest(() => {
@@ -134,9 +143,12 @@ export default function AppNavigator() {
               component={MainTabs}
               options={{ headerShown: false }}
             />
+            <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ title: 'Nouvel evenement' }} />
+            <Stack.Screen name="CreatePlaylist" component={CreatePlaylistScreen} options={{ title: 'Nouvelle playlist' }} />
             <Stack.Screen name="Event" component={EventScreen} options={{ title: 'Evenement' }} />
             <Stack.Screen name="Playlist" component={PlaylistScreen} />
             <Stack.Screen name="UserProfile" component={UserProfileScreen} options={{ title: 'Profil' }} />
+            <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} options={{ title: 'Verification' }} />
           </>
         ) : (
           <>
@@ -149,6 +161,16 @@ export default function AppNavigator() {
               name="Register"
               component={RegisterScreen}
               options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen}
+              options={{ title: 'Mot de passe oublie' }}
+            />
+            <Stack.Screen
+              name="ResetPassword"
+              component={ResetPasswordScreen}
+              options={{ title: 'Reinitialiser' }}
             />
           </>
         )}

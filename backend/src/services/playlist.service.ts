@@ -63,13 +63,25 @@ export async function createPlaylist(data: CreatePlaylistInput, userId: string) 
 export async function getPlaylist(playlistId: string, userId: string) {
   await assertCanView(playlistId, userId);
 
-  return prisma.playlist.findUnique({
+  const playlist = await prisma.playlist.findUnique({
     where: { id: playlistId },
     include: {
       creator: { select: { id: true, name: true } },
       _count: { select: { members: true, tracks: true } },
     },
   });
+
+  if (!playlist) return null;
+
+  let membership = null;
+  const member = await prisma.playlistMember.findUnique({
+    where: { playlistId_userId: { playlistId, userId } },
+  });
+  if (member) {
+    membership = { canEdit: member.canEdit };
+  }
+
+  return { ...playlist, membership };
 }
 
 export async function listPlaylists() {
