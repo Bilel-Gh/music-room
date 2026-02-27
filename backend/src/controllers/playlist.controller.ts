@@ -113,12 +113,22 @@ export async function reorderTrack(req: Request, res: Response, next: NextFuncti
 
 export async function inviteUser(req: Request, res: Response, next: NextFunction) {
   try {
+    const playlistId = req.params.id as string;
     const member = await playlistService.inviteUser(
-      req.params.id as string,
+      playlistId,
       req.user!.userId,
       req.body,
     );
     res.status(201).json({ success: true, data: member });
+
+    const io = getIO();
+    if (io) {
+      const playlist = await playlistService.getPlaylist(playlistId, req.user!.userId);
+      io.to(`user:${req.body.userId}`).emit('invitationReceived', {
+        type: 'playlist',
+        name: playlist.name,
+      });
+    }
   } catch (err) {
     next(err);
   }

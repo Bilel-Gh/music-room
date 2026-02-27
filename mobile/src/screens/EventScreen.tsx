@@ -187,10 +187,25 @@ export default function EventScreen({ route, navigation }: Props) {
     Keyboard.dismiss();
     setAdding(true);
     try {
-      await api.post(`/events/${eventId}/tracks`, {
+      const body: Record<string, unknown> = {
         title: title.trim(),
         artist: artist.trim(),
-      });
+      };
+
+      // LOCATION_TIME events require user's location to add tracks
+      if (event?.licenseType === 'LOCATION_TIME') {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          crossAlert('Erreur', 'La localisation est requise pour ajouter des tracks dans cet evenement');
+          setAdding(false);
+          return;
+        }
+        const loc = await Location.getCurrentPositionAsync({});
+        body.latitude = loc.coords.latitude;
+        body.longitude = loc.coords.longitude;
+      }
+
+      await api.post(`/events/${eventId}/tracks`, body);
       setTitle('');
       setArtist('');
     } catch (err: unknown) {

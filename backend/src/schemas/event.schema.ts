@@ -26,6 +26,8 @@ export const addTrackSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   artist: z.string().min(1, 'Artist is required'),
   externalUrl: z.string().url().optional(),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
 });
 
 export const voteSchema = z.object({

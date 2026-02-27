@@ -57,7 +57,7 @@ export async function listEvents() {
 export async function listMyEvents(userId: string) {
   return prisma.event.findMany({
     where: {
-      members: { some: { userId, role: { not: 'INVITED' } } },
+      members: { some: { userId } },
     },
     include: {
       creator: { select: { id: true, name: true } },
@@ -191,6 +191,18 @@ export async function inviteUser(eventId: string, userId: string, targetUserId: 
   });
 }
 
+// Haversine distance in km
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export async function addTrack(eventId: string, data: AddTrackInput, userId: string) {
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event) {
@@ -207,9 +219,30 @@ export async function addTrack(eventId: string, data: AddTrackInput, userId: str
     }
   }
 
+  // For LOCATION_TIME, same constraints as voting
+  if (event.licenseType === 'LOCATION_TIME') {
+    const now = new Date();
+    if (event.startTime && now < event.startTime) {
+      throw Object.assign(new Error('Event has not started yet'), { status: 403 });
+    }
+    if (event.endTime && now > event.endTime) {
+      throw Object.assign(new Error('Event has ended'), { status: 403 });
+    }
+    if (event.latitude != null && event.longitude != null) {
+      if (data.latitude == null || data.longitude == null) {
+        throw Object.assign(new Error('Location required for this event'), { status: 400 });
+      }
+      const dist = distanceKm(data.latitude, data.longitude, event.latitude, event.longitude);
+      if (dist > 5) {
+        throw Object.assign(new Error('You are too far from the event'), { status: 403 });
+      }
+    }
+  }
+
+  const { latitude, longitude, ...trackData } = data;
   return prisma.track.create({
     data: {
-      ...data,
+      ...trackData,
       eventId,
       addedById: userId,
     },

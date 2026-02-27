@@ -78,12 +78,22 @@ export async function joinEvent(req: Request, res: Response, next: NextFunction)
 
 export async function inviteUser(req: Request, res: Response, next: NextFunction) {
   try {
+    const eventId = req.params.id as string;
     const member = await eventService.inviteUser(
-      req.params.id as string,
+      eventId,
       req.user!.userId,
       req.body.userId,
     );
     res.status(201).json({ success: true, data: member });
+
+    const io = getIO();
+    if (io) {
+      const event = await eventService.getEvent(eventId, req.user!.userId);
+      io.to(`user:${req.body.userId}`).emit('invitationReceived', {
+        type: 'event',
+        name: event.name,
+      });
+    }
   } catch (err) {
     next(err);
   }

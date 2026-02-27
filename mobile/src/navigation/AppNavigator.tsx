@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
-import { connectSocket, onFriendRequest } from '../services/socket';
+import { connectSocket, onFriendRequest, onInvitation } from '../services/socket';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -50,10 +50,13 @@ function MainTabs() {
 
   useEffect(() => {
     connectSocket();
-    const unsub = onFriendRequest(() => {
+    const unsubFriend = onFriendRequest(() => {
       setNotifCount(prev => prev + 1);
     });
-    return unsub;
+    const unsubInvite = onInvitation(() => {
+      setNotifCount(prev => prev + 1);
+    });
+    return () => { unsubFriend(); unsubInvite(); };
   }, []);
 
   return (

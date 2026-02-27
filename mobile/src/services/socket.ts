@@ -9,9 +9,17 @@ let socket: Socket | null = null;
 type FriendRequestListener = (data: { from: { id: string; name: string; email: string } }) => void;
 const friendRequestListeners: Set<FriendRequestListener> = new Set();
 
+type InvitationListener = (data: { type: 'event' | 'playlist'; name: string }) => void;
+const invitationListeners: Set<InvitationListener> = new Set();
+
 export function onFriendRequest(listener: FriendRequestListener) {
   friendRequestListeners.add(listener);
   return () => { friendRequestListeners.delete(listener); };
+}
+
+export function onInvitation(listener: InvitationListener) {
+  invitationListeners.add(listener);
+  return () => { invitationListeners.delete(listener); };
 }
 
 export function getSocket(): Socket {
@@ -40,6 +48,10 @@ export function getSocket(): Socket {
 
     socket.on('friendRequestReceived', (data) => {
       friendRequestListeners.forEach(listener => listener(data));
+    });
+
+    socket.on('invitationReceived', (data) => {
+      invitationListeners.forEach(listener => listener(data));
     });
   }
   return socket;

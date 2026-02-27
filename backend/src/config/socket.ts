@@ -10,6 +10,7 @@ interface ServerToClientEvents {
   eventCreated: (data: { event: unknown }) => void;
   playlistCreated: (data: { playlist: unknown }) => void;
   friendRequestReceived: (data: { from: { id: string; name: string; email: string } }) => void;
+  invitationReceived: (data: { type: 'event' | 'playlist'; name: string }) => void;
 }
 
 interface ClientToServerEvents {
