@@ -14,12 +14,16 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
+import { useTheme } from '../theme/theme-context';
+import { useResponsive } from '../hooks/use-responsive';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreatePlaylist'>;
 
 type LicenseType = 'OPEN' | 'INVITE_ONLY';
 
 export default function CreatePlaylistScreen({ navigation }: Props) {
+  const { colors } = useTheme();
+  const { formMaxWidth } = useResponsive();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(true);
@@ -58,7 +62,7 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scroll, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]} keyboardShouldPersistTaps="handled">
       <Text style={styles.label}>Nom *</Text>
       <TextInput
         style={styles.input}
@@ -83,7 +87,7 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
         <Switch
           value={isPublic}
           onValueChange={setIsPublic}
-          trackColor={{ true: '#4f46e5', false: '#ddd' }}
+          trackColor={{ true: colors.primary, false: '#ddd' }}
         />
       </View>
 
@@ -92,10 +96,10 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
         {(['OPEN', 'INVITE_ONLY'] as LicenseType[]).map((type) => (
           <TouchableOpacity
             key={type}
-            style={[styles.licenseBtn, licenseType === type && styles.licenseBtnActive]}
+            style={[styles.licenseBtn, licenseType === type && { borderColor: colors.primary, backgroundColor: colors.primaryLight }]}
             onPress={() => setLicenseType(type)}
           >
-            <Text style={[styles.licenseBtnText, licenseType === type && styles.licenseBtnTextActive]}>
+            <Text style={[styles.licenseBtnText, licenseType === type && { color: colors.primary, fontWeight: '600' as const }]}>
               {type === 'OPEN' ? 'Ouvert' : 'Sur invitation'}
             </Text>
           </TouchableOpacity>
@@ -108,7 +112,7 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
       </Text>
 
       <TouchableOpacity
-        style={[styles.createBtn, creating && styles.btnDisabled]}
+        style={[styles.createBtn, { backgroundColor: colors.primary }, creating && styles.btnDisabled]}
         onPress={handleCreate}
         disabled={creating}
       >
@@ -177,19 +181,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
-  licenseBtnActive: {
-    borderColor: '#4f46e5',
-    backgroundColor: '#eef2ff',
-  },
+  licenseBtnActive: {},
   licenseBtnText: {
     fontSize: 13,
     color: '#666',
     fontWeight: '500',
   },
-  licenseBtnTextActive: {
-    color: '#4f46e5',
-    fontWeight: '600',
-  },
+  licenseBtnTextActive: {},
   licenseHint: {
     fontSize: 12,
     color: '#999',
@@ -197,7 +195,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   createBtn: {
-    backgroundColor: '#4f46e5',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',

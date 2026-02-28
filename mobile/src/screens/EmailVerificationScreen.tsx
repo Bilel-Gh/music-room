@@ -13,6 +13,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
+import { useTheme } from '../theme/theme-context';
+import { useResponsive } from '../hooks/use-responsive';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EmailVerification'>;
 
@@ -20,6 +22,8 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
   const { email } = route.params;
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const { colors } = useTheme();
+  const { formMaxWidth } = useResponsive();
 
   const handleVerify = async () => {
     if (code.length !== 6) {
@@ -51,7 +55,7 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.inner}>
+      <View style={[styles.inner, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]}>
         <Text style={styles.title}>Verification de l'email</Text>
         <Text style={styles.subtitle}>
           Un code a 6 chiffres a ete envoye a {email}
@@ -61,7 +65,7 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
         </Text>
 
         <TextInput
-          style={styles.codeInput}
+          style={[styles.codeInput, { borderColor: colors.primary }]}
           placeholder="000000"
           placeholderTextColor="#ccc"
           value={code}
@@ -72,7 +76,7 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
         />
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
           onPress={handleVerify}
           disabled={loading}
         >
@@ -123,7 +127,6 @@ const styles = StyleSheet.create({
   },
   codeInput: {
     borderWidth: 2,
-    borderColor: '#4f46e5',
     borderRadius: 12,
     padding: 16,
     fontSize: 28,
@@ -134,7 +137,6 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
   },
   button: {
-    backgroundColor: '#4f46e5',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',

@@ -19,6 +19,8 @@ import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
 import { getSocket, connectSocket } from '../services/socket';
+import { useTheme } from '../theme/theme-context';
+import { useResponsive } from '../hooks/use-responsive';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Event'>;
 
@@ -49,6 +51,8 @@ interface Friend {
 export default function EventScreen({ route, navigation }: Props) {
   const { eventId } = route.params;
   const userId = useAuthStore(s => s.userId);
+  const { colors } = useTheme();
+  const { contentMaxWidth } = useResponsive();
   const [event, setEvent] = useState<EventData | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +123,7 @@ export default function EventScreen({ route, navigation }: Props) {
       headerRight: () => (
         <View style={{ flexDirection: 'row', gap: 16, marginRight: 4 }}>
           <TouchableOpacity onPress={openInviteModal}>
-            <Ionicons name="person-add-outline" size={22} color="#4f46e5" />
+            <Ionicons name="person-add-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleDelete}>
             <Ionicons name="trash-outline" size={22} color="#ef4444" />
@@ -127,7 +131,7 @@ export default function EventScreen({ route, navigation }: Props) {
         </View>
       ),
     });
-  }, [event, userId, handleDelete, openInviteModal]);
+  }, [event, userId, handleDelete, openInviteModal, colors.primary]);
 
   const fetchData = async () => {
     try {
@@ -255,12 +259,12 @@ export default function EventScreen({ route, navigation }: Props) {
       </View>
       {canParticipate && (
         <TouchableOpacity
-          style={styles.voteButton}
+          style={[styles.voteButton, { backgroundColor: colors.primaryLight }]}
           onPress={() => handleVote(item.id)}
           disabled={votingId === item.id}
         >
           {votingId === item.id ? (
-            <ActivityIndicator size="small" color="#4f46e5" />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <>
               <Text style={styles.voteCount}>{item.voteCount}</Text>
@@ -281,16 +285,18 @@ export default function EventScreen({ route, navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
+
+  const responsiveContent = contentMaxWidth ? { maxWidth: contentMaxWidth, width: '100%' as const, alignSelf: 'center' as const } : undefined;
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
         {/* License badge + description */}
-        <View style={styles.headerInfo}>
+        <View style={[styles.headerInfo, responsiveContent]}>
           <View style={[styles.licenseBadge,
             event?.licenseType === 'OPEN' ? styles.badgeOpen :
             event?.licenseType === 'INVITE_ONLY' ? styles.badgeInvite : styles.badgeLocation
@@ -348,7 +354,7 @@ export default function EventScreen({ route, navigation }: Props) {
               />
             </View>
             <TouchableOpacity
-              style={[styles.addButton, adding && styles.buttonDisabled]}
+              style={[styles.addButton, { backgroundColor: colors.primary }, adding && styles.buttonDisabled]}
               onPress={handleAddTrack}
               disabled={adding}
             >
@@ -393,7 +399,7 @@ export default function EventScreen({ route, navigation }: Props) {
               </View>
 
               {loadingFriends ? (
-                <ActivityIndicator size="large" color="#4f46e5" style={{ marginVertical: 30 }} />
+                <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} />
               ) : friends.length === 0 ? (
                 <Text style={styles.emptyText}>Aucun ami a inviter</Text>
               ) : (
@@ -408,7 +414,7 @@ export default function EventScreen({ route, navigation }: Props) {
                         <Text style={styles.friendEmail}>{friend.email}</Text>
                       </View>
                       <TouchableOpacity
-                        style={[styles.inviteBtn, invitingId === friend.id && styles.buttonDisabled]}
+                        style={[styles.inviteBtn, { backgroundColor: colors.primary }, invitingId === friend.id && styles.buttonDisabled]}
                         onPress={() => handleInvite(friend.id)}
                         disabled={invitingId === friend.id}
                       >
@@ -527,7 +533,6 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
   },
   addButton: {
-    backgroundColor: '#4f46e5',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -595,7 +600,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   voteButton: {
-    backgroundColor: '#eef2ff',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
@@ -605,11 +609,11 @@ const styles = StyleSheet.create({
   voteCount: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#4f46e5',
+    color: '#333',
   },
   voteLabel: {
     fontSize: 11,
-    color: '#6366f1',
+    color: '#666',
     marginTop: 1,
   },
   emptyText: {
@@ -661,7 +665,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   inviteBtn: {
-    backgroundColor: '#4f46e5',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,

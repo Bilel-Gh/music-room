@@ -12,6 +12,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
+import { useTheme } from '../theme/theme-context';
+import { useResponsive } from '../hooks/use-responsive';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'UserProfile'>;
 
@@ -29,6 +31,8 @@ function getInitials(name: string): string {
 
 export default function UserProfileScreen({ route, navigation }: Props) {
   const { userId } = route.params;
+  const { colors } = useTheme();
+  const { contentMaxWidth } = useResponsive();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [sendingRequest, setSendingRequest] = useState(false);
@@ -73,7 +77,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -95,16 +99,16 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   const hasAnyInfo = hasPublicInfo || hasFriendsInfo || hasMusicPrefs;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, contentMaxWidth ? { maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]}>
       {/* Avatar + name */}
       <View style={styles.headerSection}>
-        <View style={styles.avatar}>
+        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           <Text style={styles.avatarText}>{getInitials(user.name)}</Text>
         </View>
         <Text style={styles.name}>{user.name}</Text>
         {isFriend && (
-          <View style={styles.friendBadge}>
-            <Ionicons name="people" size={14} color="#4f46e5" />
+          <View style={[styles.friendBadge, { backgroundColor: colors.primaryLight }]}>
+            <Ionicons name="people" size={14} color={colors.primary} />
             <Text style={styles.friendBadgeText}>Ami</Text>
           </View>
         )}
@@ -130,7 +134,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
           <Text style={styles.cardLabel}>Preferences musicales</Text>
           <View style={styles.tagsRow}>
             {user.musicPreferences!.map((pref, i) => (
-              <View key={i} style={styles.tag}>
+              <View key={i} style={[styles.tag, { backgroundColor: colors.primaryLight }]}>
                 <Text style={styles.tagText}>{pref}</Text>
               </View>
             ))}
@@ -149,7 +153,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       {/* Add friend button (if not already friends) */}
       {!isFriend && !requestSent && (
         <TouchableOpacity
-          style={[styles.addFriendBtn, sendingRequest && styles.buttonDisabled]}
+          style={[styles.addFriendBtn, { backgroundColor: colors.primary }, sendingRequest && styles.buttonDisabled]}
           onPress={handleSendFriendRequest}
           disabled={sendingRequest}
         >
@@ -196,7 +200,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#4f46e5',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 14,
@@ -215,7 +218,6 @@ const styles = StyleSheet.create({
   friendBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#eef2ff',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -223,7 +225,7 @@ const styles = StyleSheet.create({
   },
   friendBadgeText: {
     fontSize: 13,
-    color: '#4f46e5',
+    color: '#333',
     fontWeight: '500',
   },
   card: {
@@ -257,14 +259,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tag: {
-    backgroundColor: '#eef2ff',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 14,
   },
   tagText: {
     fontSize: 13,
-    color: '#4f46e5',
+    color: '#333',
     fontWeight: '500',
   },
   emptyCard: {
@@ -286,7 +287,6 @@ const styles = StyleSheet.create({
   },
   addFriendBtn: {
     flexDirection: 'row',
-    backgroundColor: '#4f46e5',
     padding: 14,
     borderRadius: 10,
     alignItems: 'center',

@@ -13,6 +13,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
+import { useTheme } from '../theme/theme-context';
+import { useResponsive } from '../hooks/use-responsive';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
 
@@ -20,6 +22,8 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const { colors } = useTheme();
+  const { formMaxWidth } = useResponsive();
 
   const handleSend = async () => {
     if (!email.trim()) {
@@ -40,23 +44,25 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     }
   };
 
+  const responsiveInner = [styles.inner, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined];
+
   if (sent) {
     return (
       <View style={styles.container}>
-        <View style={styles.inner}>
+        <View style={responsiveInner}>
           <Text style={styles.title}>Email sent</Text>
           <Text style={styles.info}>
             If an account exists with this email, a reset token has been generated.{'\n'}
             Check the server logs to retrieve it.
           </Text>
           <TouchableOpacity
-            style={styles.button}
+            style={[styles.button, { backgroundColor: colors.primary }]}
             onPress={() => navigation.navigate('ResetPassword')}
           >
             <Text style={styles.buttonText}>Enter token</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.linkText}>Back to login</Text>
+            <Text style={[styles.linkText, { color: colors.primary }]}>Back to login</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -68,7 +74,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.inner}>
+      <View style={responsiveInner}>
         <Text style={styles.title}>Forgot password</Text>
         <Text style={styles.subtitle}>
           Enter your email to receive a reset token
@@ -85,7 +91,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
         />
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
           onPress={handleSend}
           disabled={loading}
         >
@@ -97,7 +103,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.linkText}>Back to login</Text>
+          <Text style={[styles.linkText, { color: colors.primary }]}>Back to login</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -145,7 +151,6 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
   },
   button: {
-    backgroundColor: '#4f46e5',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -162,7 +167,6 @@ const styles = StyleSheet.create({
   linkText: {
     textAlign: 'center',
     marginTop: 20,
-    color: '#4f46e5',
     fontSize: 14,
     fontWeight: '500',
   },

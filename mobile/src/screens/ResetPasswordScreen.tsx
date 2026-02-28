@@ -13,6 +13,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
+import { useTheme } from '../theme/theme-context';
+import { useResponsive } from '../hooks/use-responsive';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ResetPassword'>;
 
@@ -21,6 +23,8 @@ export default function ResetPasswordScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { colors } = useTheme();
+  const { formMaxWidth } = useResponsive();
 
   const handleReset = async () => {
     if (!token.trim()) {
@@ -56,7 +60,7 @@ export default function ResetPasswordScreen({ navigation }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.inner}>
+      <View style={[styles.inner, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]}>
         <Text style={styles.title}>Reinitialiser le mot de passe</Text>
         <Text style={styles.subtitle}>
           Entrez le token recu et votre nouveau mot de passe
@@ -90,7 +94,7 @@ export default function ResetPasswordScreen({ navigation }: Props) {
         />
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
           onPress={handleReset}
           disabled={loading}
         >
@@ -102,7 +106,7 @@ export default function ResetPasswordScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.linkText}>Retour a la connexion</Text>
+          <Text style={[styles.linkText, { color: colors.primary }]}>Retour a la connexion</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -143,7 +147,6 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
   },
   button: {
-    backgroundColor: '#4f46e5',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -160,7 +163,6 @@ const styles = StyleSheet.create({
   linkText: {
     textAlign: 'center',
     marginTop: 20,
-    color: '#4f46e5',
     fontSize: 14,
     fontWeight: '500',
   },

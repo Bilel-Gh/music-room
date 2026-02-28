@@ -16,6 +16,8 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
+import { useTheme } from '../theme/theme-context';
+import { useResponsive } from '../hooks/use-responsive';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -27,6 +29,8 @@ export default function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const setTokens = useAuthStore((s) => s.setTokens);
+  const { colors } = useTheme();
+  const { formMaxWidth } = useResponsive();
 
   const handleRegister = async () => {
     if (!name.trim() || !email.trim() || !password) {
@@ -46,7 +50,6 @@ export default function RegisterScreen({ navigation }: Props) {
         password,
       });
       await setTokens(data.data.accessToken, data.data.refreshToken);
-      // Navigate to email verification after the auth stack switches
       setTimeout(() => {
         navigation.reset({
           index: 1,
@@ -106,7 +109,7 @@ export default function RegisterScreen({ navigation }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.inner}>
+      <View style={[styles.inner, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]}>
         <Text style={styles.title}>Create an account</Text>
         <Text style={styles.subtitle}>Join Music Room</Text>
 
@@ -138,7 +141,7 @@ export default function RegisterScreen({ navigation }: Props) {
         />
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
           onPress={handleRegister}
           disabled={loading}
         >
@@ -159,7 +162,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.linkText}>
-            Already have an account? <Text style={styles.linkBold}>Log in</Text>
+            Already have an account? <Text style={[styles.linkBold, { color: colors.primary }]}>Log in</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -201,7 +204,6 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
   },
   button: {
-    backgroundColor: '#4f46e5',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -236,7 +238,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   linkBold: {
-    color: '#4f46e5',
     fontWeight: '600',
   },
 });

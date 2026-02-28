@@ -19,6 +19,8 @@ import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
 import { getSocket, connectSocket } from '../services/socket';
+import { useTheme } from '../theme/theme-context';
+import { useResponsive } from '../hooks/use-responsive';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Playlist'>;
 
@@ -49,6 +51,8 @@ interface Friend {
 export default function PlaylistScreen({ route, navigation }: Props) {
   const { playlistId } = route.params;
   const userId = useAuthStore(s => s.userId);
+  const { colors } = useTheme();
+  const { contentMaxWidth } = useResponsive();
   const [playlist, setPlaylist] = useState<PlaylistData | null>(null);
   const [tracks, setTracks] = useState<PlaylistTrack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,7 +134,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
       headerRight: () => (
         <View style={{ flexDirection: 'row', gap: 16, marginRight: 4 }}>
           <TouchableOpacity onPress={openInviteModal}>
-            <Ionicons name="person-add-outline" size={22} color="#4f46e5" />
+            <Ionicons name="person-add-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleDelete}>
             <Ionicons name="trash-outline" size={22} color="#ef4444" />
@@ -138,7 +142,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
         </View>
       ),
     });
-  }, [playlist, userId, isCreator, handleDelete, openInviteModal]);
+  }, [playlist, userId, isCreator, handleDelete, openInviteModal, colors.primary]);
 
   // Set title for non-creators too
   useEffect(() => {
@@ -274,7 +278,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
         </View>
         {canEdit && (
           isBusy ? (
-            <ActivityIndicator size="small" color="#4f46e5" style={{ marginRight: 8 }} />
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
           ) : (
             <View style={styles.actions}>
               <TouchableOpacity
@@ -307,7 +311,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -316,7 +320,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
         {/* License badge */}
-        <View style={styles.headerInfo}>
+        <View style={[styles.headerInfo, contentMaxWidth ? { maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]}>
           <View style={[styles.licenseBadge,
             playlist?.licenseType === 'OPEN' ? styles.lbOpen : styles.lbInvite
           ]}>
@@ -370,7 +374,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
               />
             </View>
             <TouchableOpacity
-              style={[styles.addButton, adding && styles.buttonDisabled]}
+              style={[styles.addButton, { backgroundColor: colors.primary }, adding && styles.buttonDisabled]}
               onPress={handleAddTrack}
               disabled={adding}
             >
@@ -415,7 +419,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
               </View>
 
               {loadingFriends ? (
-                <ActivityIndicator size="large" color="#4f46e5" style={{ marginVertical: 30 }} />
+                <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} />
               ) : friends.length === 0 ? (
                 <Text style={styles.emptyText}>Aucun ami a inviter</Text>
               ) : (
@@ -437,12 +441,12 @@ export default function PlaylistScreen({ route, navigation }: Props) {
                             onValueChange={(val) =>
                               setInviteCanEdit(prev => ({ ...prev, [friend.id]: val }))
                             }
-                            trackColor={{ true: '#4f46e5', false: '#ddd' }}
+                            trackColor={{ true: colors.primary, false: '#ddd' }}
                           />
                         </View>
                       </View>
                       <TouchableOpacity
-                        style={[styles.inviteBtn, invitingId === friend.id && styles.buttonDisabled]}
+                        style={[styles.inviteBtn, { backgroundColor: colors.primary }, invitingId === friend.id && styles.buttonDisabled]}
                         onPress={() => handleInvite(friend.id)}
                         disabled={invitingId === friend.id}
                       >
@@ -558,7 +562,6 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
   },
   addButton: {
-    backgroundColor: '#4f46e5',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -719,7 +722,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   inviteBtn: {
-    backgroundColor: '#4f46e5',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,

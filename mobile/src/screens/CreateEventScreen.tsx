@@ -17,12 +17,16 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
+import { useTheme } from '../theme/theme-context';
+import { useResponsive } from '../hooks/use-responsive';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateEvent'>;
 
 type LicenseType = 'OPEN' | 'INVITE_ONLY' | 'LOCATION_TIME';
 
 export default function CreateEventScreen({ navigation }: Props) {
+  const { colors } = useTheme();
+  const { formMaxWidth } = useResponsive();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(true);
@@ -149,7 +153,7 @@ export default function CreateEventScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scroll, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]} keyboardShouldPersistTaps="handled">
       <Text style={styles.label}>Nom *</Text>
       <TextInput
         style={styles.input}
@@ -174,10 +178,10 @@ export default function CreateEventScreen({ navigation }: Props) {
         {(['OPEN', 'INVITE_ONLY', 'LOCATION_TIME'] as LicenseType[]).map((type) => (
           <TouchableOpacity
             key={type}
-            style={[styles.licenseBtn, licenseType === type && styles.licenseBtnActive]}
+            style={[styles.licenseBtn, licenseType === type && { borderColor: colors.primary, backgroundColor: colors.primaryLight }]}
             onPress={() => handleLicenseChange(type)}
           >
-            <Text style={[styles.licenseBtnText, licenseType === type && styles.licenseBtnTextActive]}>
+            <Text style={[styles.licenseBtnText, licenseType === type && { color: colors.primary, fontWeight: '600' as const }]}>
               {type === 'OPEN' ? 'Ouvert' : type === 'INVITE_ONLY' ? 'Sur invitation' : 'Lieu + Horaire'}
             </Text>
           </TouchableOpacity>
@@ -194,7 +198,7 @@ export default function CreateEventScreen({ navigation }: Props) {
         <Switch
           value={isPublic}
           onValueChange={setIsPublic}
-          trackColor={{ true: '#4f46e5', false: '#ddd' }}
+          trackColor={{ true: colors.primary, false: '#ddd' }}
         />
       </View>
       <Text style={styles.visibilityHint}>
@@ -215,7 +219,7 @@ export default function CreateEventScreen({ navigation }: Props) {
           />
           {geocoding && (
             <View style={styles.geocodingRow}>
-              <ActivityIndicator size="small" color="#4f46e5" />
+              <ActivityIndicator size="small" color={colors.primary} />
               <Text style={styles.geocodingText}>Recherche de la ville...</Text>
             </View>
           )}
@@ -286,7 +290,7 @@ export default function CreateEventScreen({ navigation }: Props) {
       )}
 
       <TouchableOpacity
-        style={[styles.createBtn, creating && styles.btnDisabled]}
+        style={[styles.createBtn, { backgroundColor: colors.primary }, creating && styles.btnDisabled]}
         onPress={handleCreate}
         disabled={creating}
       >
@@ -361,20 +365,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
-  licenseBtnActive: {
-    borderColor: '#4f46e5',
-    backgroundColor: '#eef2ff',
-  },
+  licenseBtnActive: {},
   licenseBtnText: {
     fontSize: 11,
     color: '#666',
     fontWeight: '500',
     textAlign: 'center',
   },
-  licenseBtnTextActive: {
-    color: '#4f46e5',
-    fontWeight: '600',
-  },
+  licenseBtnTextActive: {},
   licenseHint: {
     fontSize: 12,
     color: '#999',
@@ -415,7 +413,7 @@ const styles = StyleSheet.create({
   },
   geocodingText: {
     fontSize: 13,
-    color: '#4f46e5',
+    color: '#666',
   },
   pickerRow: {
     flexDirection: 'row',
@@ -436,7 +434,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   createBtn: {
-    backgroundColor: '#4f46e5',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
