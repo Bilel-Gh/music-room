@@ -16,6 +16,7 @@ model User {
   googleId      String?   @unique
   emailVerified Boolean   @default(false)
   isAdmin       Boolean   @default(false)
+  isPremium     Boolean   @default(false)
 
   // Champs de profil avec niveaux de visibilité
   publicInfo       String?

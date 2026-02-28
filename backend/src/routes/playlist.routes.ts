@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware.js';
+import { requirePremium } from '../middleware/premium.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import {
   createPlaylistSchema,
@@ -86,7 +87,7 @@ router.get('/invitations', playlistController.listPendingInvitations);
  *       201:
  *         description: Playlist created
  */
-router.post('/', validate(createPlaylistSchema), playlistController.createPlaylist);
+router.post('/', requirePremium, validate(createPlaylistSchema), playlistController.createPlaylist);
 
 /**
  * @swagger
@@ -222,7 +223,7 @@ router.get('/:id/tracks', playlistController.getPlaylistTracks);
  *       403:
  *         description: No edit access
  */
-router.post('/:id/tracks', validate(addPlaylistTrackSchema), playlistController.addTrack);
+router.post('/:id/tracks', requirePremium, validate(addPlaylistTrackSchema), playlistController.addTrack);
 
 /**
  * @swagger
@@ -251,7 +252,7 @@ router.post('/:id/tracks', validate(addPlaylistTrackSchema), playlistController.
  *       404:
  *         description: Track not found
  */
-router.delete('/:id/tracks/:trackId', playlistController.removeTrack);
+router.delete('/:id/tracks/:trackId', requirePremium, playlistController.removeTrack);
 
 /**
  * @swagger
@@ -291,7 +292,7 @@ router.delete('/:id/tracks/:trackId', playlistController.removeTrack);
  *       404:
  *         description: Track not found
  */
-router.put('/:id/tracks/:trackId/position', validate(reorderTrackSchema), playlistController.reorderTrack);
+router.put('/:id/tracks/:trackId/position', requirePremium, validate(reorderTrackSchema), playlistController.reorderTrack);
 
 /**
  * @swagger

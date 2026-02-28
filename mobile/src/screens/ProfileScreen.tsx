@@ -32,6 +32,7 @@ interface UserProfile {
   friendsInfo: string | null;
   privateInfo: string | null;
   musicPreferences: string[];
+  isPremium: boolean;
 }
 
 function getInitials(name: string): string {
@@ -61,6 +62,9 @@ export default function ProfileScreen() {
 
   const logout = useAuthStore((s) => s.logout);
   const email = useAuthStore((s) => s.email);
+  const premiumEnabled = useAuthStore((s) => s.premiumEnabled);
+  const setIsPremium = useAuthStore((s) => s.setIsPremium);
+  const [togglingPremium, setTogglingPremium] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -72,6 +76,7 @@ export default function ProfileScreen() {
       const user = data.data as UserProfile;
       setProfile(user);
       populateFields(user);
+      setIsPremium(user.isPremium);
     } catch {
       crossAlert('Error', 'Unable to load profile');
     } finally {
@@ -153,6 +158,21 @@ export default function ProfileScreen() {
       window.location.href = `${apiUrl}/api/auth/google`;
     } else {
       promptGoogleAsync();
+    }
+  };
+
+  const handleTogglePremium = async () => {
+    setTogglingPremium(true);
+    try {
+      const { data } = await api.put('/users/me/subscription');
+      const newValue = data.data.isPremium;
+      setIsPremium(newValue);
+      setProfile(prev => prev ? { ...prev, isPremium: newValue } : prev);
+      crossAlert('Success', newValue ? 'You are now Premium!' : 'Subscription downgraded to Free');
+    } catch {
+      crossAlert('Error', 'Unable to update subscription');
+    } finally {
+      setTogglingPremium(false);
     }
   };
 
@@ -257,6 +277,37 @@ export default function ProfileScreen() {
               ))}
             </View>
           </View>
+
+          {premiumEnabled && (
+            <View style={[styles.card, profile.isPremium ? styles.premiumCard : undefined]}>
+              <Text style={styles.cardLabel}>Subscription</Text>
+              <Text style={[styles.cardValue, { fontWeight: '600', marginBottom: 10 }]}>
+                {profile.isPremium ? 'Premium' : 'Free'}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.subscriptionBtn,
+                  profile.isPremium ? styles.downgradeBtn : { backgroundColor: colors.primary },
+                  togglingPremium && styles.buttonDisabled,
+                ]}
+                onPress={handleTogglePremium}
+                disabled={togglingPremium}
+              >
+                {togglingPremium ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.subscriptionBtnText}>
+                    {profile.isPremium ? 'Downgrade to Free' : 'Upgrade to Premium'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              {!profile.isPremium && (
+                <Text style={{ fontSize: 11, color: '#888', marginTop: 6, textAlign: 'center' }}>
+                  Premium unlocks Playlist Editor features
+                </Text>
+              )}
+            </View>
+          )}
 
           <TouchableOpacity style={[styles.editButton, { backgroundColor: colors.primary }]} onPress={handleEdit}>
             <Text style={styles.editButtonText}>Edit profile</Text>
@@ -442,6 +493,24 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 13,
     fontWeight: '500',
+  },
+  premiumCard: {
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    backgroundColor: '#fffbeb',
+  },
+  subscriptionBtn: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  downgradeBtn: {
+    backgroundColor: '#6b7280',
+  },
+  subscriptionBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   editButton: {
     padding: 16,

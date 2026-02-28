@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { useAuthStore } from './src/store/authStore';
 import { ThemeProvider } from './src/theme/theme-context';
+import api from './src/services/api';
 
 export default function App() {
   useEffect(() => {
@@ -17,6 +18,12 @@ export default function App() {
         window.history.replaceState({}, '', window.location.pathname);
       }
     }
+
+    api.get('/config/features')
+      .then(({ data }) => {
+        useAuthStore.getState().setPremiumEnabled(data.premiumEnabled ?? false);
+      })
+      .catch(() => {});
   }, []);
 
   if (Platform.OS === 'web') {

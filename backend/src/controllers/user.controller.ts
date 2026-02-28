@@ -108,3 +108,12 @@ export async function getFriends(req: Request, res: Response, next: NextFunction
     next(err);
   }
 }
+
+export async function toggleSubscription(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await userService.toggleSubscription(req.user!.userId);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}

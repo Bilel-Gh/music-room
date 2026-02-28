@@ -24,8 +24,12 @@ interface AuthState {
   refreshToken: string | null;
   userId: string | null;
   email: string | null;
+  isPremium: boolean;
+  premiumEnabled: boolean;
   isLoading: boolean;
   setTokens: (access: string, refresh: string) => void;
+  setIsPremium: (value: boolean) => void;
+  setPremiumEnabled: (value: boolean) => void;
   logout: () => void;
   loadTokens: () => Promise<void>;
 }
@@ -35,6 +39,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   refreshToken: null,
   userId: null,
   email: null,
+  isPremium: false,
+  premiumEnabled: false,
   isLoading: true,
 
   setTokens: async (access, refresh) => {
@@ -48,10 +54,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
 
+  setIsPremium: (value) => set({ isPremium: value }),
+  setPremiumEnabled: (value) => set({ premiumEnabled: value }),
+
   logout: async () => {
     await AsyncStorage.removeItem('accessToken');
     await AsyncStorage.removeItem('refreshToken');
-    set({ accessToken: null, refreshToken: null, userId: null, email: null });
+    set({ accessToken: null, refreshToken: null, userId: null, email: null, isPremium: false });
   },
 
   loadTokens: async () => {

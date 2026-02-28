@@ -11,6 +11,7 @@ import playlistRoutes from './routes/playlist.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/logger.middleware.js';
 import { globalLimiter } from './config/rate-limit.js';
+import { FEATURES } from './config/features.js';
 
 const app = express();
 
@@ -26,6 +27,10 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.get('/api/config/features', (_req, res) => {
+  res.json({ premiumEnabled: FEATURES.premiumEnabled });
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

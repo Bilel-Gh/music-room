@@ -16,6 +16,7 @@ import api from '../services/api';
 import { crossAlert } from '../utils/alert';
 import { useTheme } from '../theme/theme-context';
 import { useResponsive } from '../hooks/use-responsive';
+import { useAuthStore } from '../store/authStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreatePlaylist'>;
 
@@ -24,6 +25,8 @@ type LicenseType = 'OPEN' | 'INVITE_ONLY';
 export default function CreatePlaylistScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const { formMaxWidth } = useResponsive();
+  const isPremium = useAuthStore(s => s.isPremium);
+  const premiumEnabled = useAuthStore(s => s.premiumEnabled);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(true);
@@ -60,6 +63,26 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
       setCreating(false);
     }
   };
+
+  if (premiumEnabled && !isPremium) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>&#x1F512;</Text>
+        <Text style={{ fontSize: 18, fontWeight: '600', color: '#1a1a1a', marginBottom: 8, textAlign: 'center' }}>
+          Premium Feature
+        </Text>
+        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 24 }}>
+          Creating playlists requires a Premium subscription. Upgrade in your Profile settings.
+        </Text>
+        <TouchableOpacity
+          style={[styles.createBtn, { backgroundColor: colors.primary }]}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.createBtnText}>Go back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={[styles.scroll, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]} keyboardShouldPersistTaps="handled">

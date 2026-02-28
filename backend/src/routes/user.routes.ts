@@ -80,6 +80,20 @@ router.get('/me/friends', userController.getFriends);
 
 /**
  * @swagger
+ * /users/me/subscription:
+ *   put:
+ *     summary: Toggle premium subscription (upgrade/downgrade)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Subscription status toggled
+ */
+router.put('/me/subscription', userController.toggleSubscription);
+
+/**
+ * @swagger
  * /users/friends/{friendId}:
  *   delete:
  *     summary: Remove a friend

@@ -17,6 +17,7 @@ export async function getMe(userId: string) {
     friendsInfo: user.friendsInfo,
     privateInfo: user.privateInfo,
     musicPreferences: user.musicPreferences,
+    isPremium: user.isPremium,
     createdAt: user.createdAt,
   };
 }
@@ -214,4 +215,23 @@ export async function getFriends(userId: string) {
   return friendships.map(f =>
     f.userId === userId ? f.friend : f.user
   );
+}
+
+export async function toggleSubscription(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isPremium: true },
+  });
+
+  if (!user) {
+    throw Object.assign(new Error('User not found'), { status: 404 });
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { isPremium: !user.isPremium },
+    select: { isPremium: true },
+  });
+
+  return updated;
 }

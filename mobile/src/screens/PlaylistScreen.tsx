@@ -51,6 +51,8 @@ interface Friend {
 export default function PlaylistScreen({ route, navigation }: Props) {
   const { playlistId } = route.params;
   const userId = useAuthStore(s => s.userId);
+  const isPremium = useAuthStore(s => s.isPremium);
+  const premiumEnabled = useAuthStore(s => s.premiumEnabled);
   const { colors } = useTheme();
   const { contentMaxWidth } = useResponsive();
   const [playlist, setPlaylist] = useState<PlaylistData | null>(null);
@@ -68,9 +70,10 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [inviteCanEdit, setInviteCanEdit] = useState<Record<string, boolean>>({});
 
-  const canEdit = playlist
+  const hasEditPermission = playlist
     ? playlist.licenseType === 'OPEN' || (playlist.membership?.canEdit === true)
     : false;
+  const canEdit = premiumEnabled ? (hasEditPermission && isPremium) : hasEditPermission;
 
   const isCreator = playlist?.creatorId === userId;
 
@@ -340,10 +343,20 @@ export default function PlaylistScreen({ route, navigation }: Props) {
         ) : null}
 
         {/* Read-only message for viewers */}
-        {!canEdit && playlist?.licenseType === 'INVITE_ONLY' && (
+        {!canEdit && playlist?.licenseType === 'INVITE_ONLY' && !premiumEnabled && (
           <View style={styles.readOnlyBanner}>
             <Ionicons name="eye-outline" size={16} color="#1e40af" />
             <Text style={styles.readOnlyText}>Lecture seule — vous ne pouvez pas modifier cette playlist</Text>
+          </View>
+        )}
+
+        {/* Premium gate banner */}
+        {premiumEnabled && !isPremium && hasEditPermission && (
+          <View style={[styles.readOnlyBanner, { backgroundColor: '#fef3c7' }]}>
+            <Ionicons name="lock-closed-outline" size={16} color="#92400e" />
+            <Text style={[styles.readOnlyText, { color: '#92400e' }]}>
+              Premium required — upgrade in your Profile to edit playlists
+            </Text>
           </View>
         )}
 
