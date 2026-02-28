@@ -259,6 +259,7 @@ export async function getEventTracks(eventId: string) {
     where: { eventId },
     include: {
       addedBy: { select: { id: true, name: true } },
+      votes: { select: { userId: true } },
       _count: { select: { votes: true } },
     },
     orderBy: [{ voteCount: 'desc' }, { createdAt: 'asc' }],

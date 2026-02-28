@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
-import { useNetworkStore, useNetworkListener } from '../store/networkStore';
+import { useNetworkListener } from '../store/networkStore';
 import { connectSocket, onFriendRequest, onInvitation } from '../services/socket';
 import { useResponsive } from '../hooks/use-responsive';
 import { useTheme } from '../theme/theme-context';
@@ -111,18 +111,6 @@ function DesktopSidebar({ notifCount, onNotifReset }: { notifCount: number; onNo
   );
 }
 
-function OfflineBanner() {
-  const isConnected = useNetworkStore(s => s.isConnected);
-  if (isConnected) return null;
-
-  return (
-    <View style={offlineBannerStyles.banner}>
-      <Ionicons name="cloud-offline-outline" size={16} color="#fff" />
-      <Text style={offlineBannerStyles.text}>Mode Hors-Ligne (Lecture seule)</Text>
-    </View>
-  );
-}
-
 function MainTabs() {
   const [notifCount, setNotifCount] = useState(0);
   const { isDesktop } = useResponsive();
@@ -143,19 +131,14 @@ function MainTabs() {
 
   if (isDesktop) {
     return (
-      <View style={{ flex: 1 }}>
-        <OfflineBanner />
-        <DesktopSidebar
-          notifCount={notifCount}
-          onNotifReset={() => setNotifCount(0)}
-        />
-      </View>
+      <DesktopSidebar
+        notifCount={notifCount}
+        onNotifReset={() => setNotifCount(0)}
+      />
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
-    <OfflineBanner />
     <Tab.Navigator
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
@@ -214,7 +197,6 @@ function MainTabs() {
         }}
       />
     </Tab.Navigator>
-    </View>
   );
 }
 
@@ -278,22 +260,6 @@ export default function AppNavigator() {
     </NavigationContainer>
   );
 }
-
-const offlineBannerStyles = StyleSheet.create({
-  banner: {
-    backgroundColor: '#dc2626',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    gap: 6,
-  },
-  text: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});
 
 const sidebarStyles = StyleSheet.create({
   container: {

@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import OfflineBanner from '../components/OfflineBanner';
 import api from '../services/api';
 import { onFriendRequest } from '../services/socket';
 import { crossAlert } from '../utils/alert';
@@ -207,6 +208,7 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <OfflineBanner />
       <ScrollView
         contentContainerStyle={[styles.content, contentMaxWidth ? { maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

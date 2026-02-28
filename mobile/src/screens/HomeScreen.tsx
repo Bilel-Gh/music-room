@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { RootStackParamList, TabParamList } from '../navigation/AppNavigator';
+import OfflineBanner from '../components/OfflineBanner';
 import { useTheme } from '../theme/theme-context';
 import { useResponsive } from '../hooks/use-responsive';
 
@@ -270,6 +271,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <OfflineBanner />
       {/* Feed mode toggle */}
       <View style={styles.feedToggle}>
         <TouchableOpacity

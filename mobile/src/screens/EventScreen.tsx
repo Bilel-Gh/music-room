@@ -15,8 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import OfflineBanner from '../components/OfflineBanner';
 import { useAuthStore } from '../store/authStore';
-import { useNetworkStore, queueOfflineVote } from '../store/networkStore';
+import { useNetworkStore } from '../store/networkStore';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
 import { getSocket, connectSocket } from '../services/socket';
@@ -31,6 +32,7 @@ interface Track {
   artist: string;
   voteCount: number;
   externalUrl: string | null;
+  votes?: { userId: string }[];
 }
 
 interface EventData {
@@ -184,6 +186,10 @@ export default function EventScreen({ route, navigation }: Props) {
   };
 
   const handleAddTrack = async () => {
+    if (!useNetworkStore.getState().isConnected) {
+      crossAlert('Mode Hors-Ligne', 'Cette action necessite une connexion internet.');
+      return;
+    }
     if (!title.trim() || !artist.trim()) {
       crossAlert('Erreur', 'Titre et artiste requis');
       return;
@@ -223,17 +229,8 @@ export default function EventScreen({ route, navigation }: Props) {
   };
 
   const handleVote = async (trackId: string) => {
-    const isConnected = useNetworkStore.getState().isConnected;
-
-    // Offline: queue the vote for later sync
-    if (!isConnected) {
-      await queueOfflineVote({ eventId, trackId });
-      // Optimistic local update
-      setTracks(prev =>
-        prev.map(t => t.id === trackId ? { ...t, voteCount: t.voteCount + 1 } : t)
-          .sort((a, b) => b.voteCount - a.voteCount)
-      );
-      crossAlert('Hors-ligne', 'Vote sauvegarde hors-ligne. Il sera envoye au retour de la connexion.');
+    if (!useNetworkStore.getState().isConnected) {
+      crossAlert('Mode Hors-Ligne', 'Cette action necessite une connexion internet.');
       return;
     }
 
@@ -263,7 +260,10 @@ export default function EventScreen({ route, navigation }: Props) {
     }
   };
 
-  const renderTrack = ({ item, index }: { item: Track; index: number }) => (
+  const renderTrack = ({ item, index }: { item: Track; index: number }) => {
+    const hasVoted = item.votes?.some(v => v.userId === userId) ?? false;
+
+    return (
     <View style={styles.trackCard}>
       <View style={styles.trackRank}>
         <Text style={styles.rankNumber}>{index + 1}</Text>
@@ -274,16 +274,16 @@ export default function EventScreen({ route, navigation }: Props) {
       </View>
       {canParticipate && (
         <TouchableOpacity
-          style={[styles.voteButton, { backgroundColor: colors.primaryLight }]}
+          style={[styles.voteButton, hasVoted ? { backgroundColor: colors.primary } : { backgroundColor: colors.primaryLight }]}
           onPress={() => handleVote(item.id)}
           disabled={votingId === item.id}
         >
           {votingId === item.id ? (
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="small" color={hasVoted ? '#fff' : colors.primary} />
           ) : (
             <>
-              <Text style={styles.voteCount}>{item.voteCount}</Text>
-              <Text style={styles.voteLabel}>Vote</Text>
+              <Text style={[styles.voteCount, hasVoted && { color: '#fff' }]}>{item.voteCount}</Text>
+              <Text style={[styles.voteLabel, hasVoted && { color: 'rgba(255,255,255,0.8)' }]}>{hasVoted ? 'Vote' : 'Vote'}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -295,7 +295,8 @@ export default function EventScreen({ route, navigation }: Props) {
         </View>
       )}
     </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -310,6 +311,7 @@ export default function EventScreen({ route, navigation }: Props) {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
+        <OfflineBanner />
         {/* License badge + description */}
         <View style={[styles.headerInfo, responsiveContent]}>
           <View style={[styles.licenseBadge,

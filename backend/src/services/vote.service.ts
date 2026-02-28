@@ -63,14 +63,21 @@ export async function voteForTrack(
     }
   }
 
-  // Transaction to avoid race conditions on vote
+  // Transaction to avoid race conditions — toggle: vote if not voted, unvote if already voted
   const result = await prisma.$transaction(async (tx) => {
     const existingVote = await tx.vote.findUnique({
       where: { trackId_userId: { trackId, userId } },
     });
 
     if (existingVote) {
-      throw Object.assign(new Error('You already voted for this track'), { status: 409 });
+      await tx.vote.delete({ where: { id: existingVote.id } });
+
+      const updatedTrack = await tx.track.update({
+        where: { id: trackId },
+        data: { voteCount: { decrement: 1 } },
+      });
+
+      return { track: updatedTrack, voted: false };
     }
 
     await tx.vote.create({ data: { trackId, userId } });
@@ -80,7 +87,7 @@ export async function voteForTrack(
       data: { voteCount: { increment: 1 } },
     });
 
-    return updatedTrack;
+    return { track: updatedTrack, voted: true };
   });
 
   return result;

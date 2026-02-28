@@ -15,9 +15,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import OfflineBanner from '../components/OfflineBanner';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
+import { useNetworkStore } from '../store/networkStore';
 import { getSocket, connectSocket } from '../services/socket';
 import { useTheme } from '../theme/theme-context';
 import { useResponsive } from '../hooks/use-responsive';
@@ -204,6 +206,10 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   };
 
   const handleAddTrack = async () => {
+    if (!useNetworkStore.getState().isConnected) {
+      crossAlert('Mode Hors-Ligne', 'Cette action necessite une connexion internet.');
+      return;
+    }
     if (!title.trim() || !artist.trim()) {
       crossAlert('Erreur', 'Titre et artiste requis');
       return;
@@ -228,6 +234,10 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   };
 
   const handleDeleteTrack = async (trackId: string) => {
+    if (!useNetworkStore.getState().isConnected) {
+      crossAlert('Mode Hors-Ligne', 'Cette action necessite une connexion internet.');
+      return;
+    }
     crossAlert('Supprimer', 'Retirer cette track de la playlist ?', [
       { text: 'Annuler', style: 'cancel' },
       {
@@ -250,6 +260,10 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   };
 
   const handleMove = async (trackId: string, currentPos: number, direction: 'up' | 'down') => {
+    if (!useNetworkStore.getState().isConnected) {
+      crossAlert('Mode Hors-Ligne', 'Cette action necessite une connexion internet.');
+      return;
+    }
     const newPosition = direction === 'up' ? currentPos - 1 : currentPos + 1;
     if (newPosition < 0 || newPosition >= tracks.length) return;
 
@@ -322,6 +336,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
+        <OfflineBanner />
         {/* License badge */}
         <View style={[styles.headerInfo, contentMaxWidth ? { maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]}>
           <View style={[styles.licenseBadge,

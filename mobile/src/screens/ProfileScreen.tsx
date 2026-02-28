@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import OfflineBanner from '../components/OfflineBanner';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
@@ -201,6 +202,7 @@ export default function ProfileScreen() {
   if (!isEditing) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
+        <OfflineBanner />
         <ScrollView contentContainerStyle={[styles.scroll, responsiveScroll]}>
           {/* Avatar */}
           <View style={styles.avatarContainer}>
@@ -340,6 +342,7 @@ export default function ProfileScreen() {
   // Edit mode
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <OfflineBanner />
       <ScrollView contentContainerStyle={[styles.scroll, responsiveScroll]} keyboardShouldPersistTaps="handled">
         <Text style={styles.email}>{profile.email}</Text>
 

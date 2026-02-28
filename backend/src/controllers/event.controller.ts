@@ -159,16 +159,16 @@ export async function voteForTrack(req: Request, res: Response, next: NextFuncti
     const trackId = req.params.trackId as string;
     const { latitude, longitude } = req.body;
 
-    const track = await voteService.voteForTrack(trackId, req.user!.userId, latitude, longitude);
+    const result = await voteService.voteForTrack(trackId, req.user!.userId, latitude, longitude);
 
-    // Émettre la liste mise à jour via Socket.io
+    // Emit updated track list via Socket.io
     const io = getIO();
     if (io) {
       const tracks = await eventService.getEventTracks(eventId);
       io.to(`event:${eventId}`).emit('trackVoted', { eventId, tracks });
     }
 
-    res.json({ success: true, data: track });
+    res.json({ success: true, data: result.track, voted: result.voted });
   } catch (err) {
     next(err);
   }

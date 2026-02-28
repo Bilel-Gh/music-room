@@ -367,11 +367,9 @@ router.post('/:id/tracks', validate(addTrackSchema), eventController.addTrack);
  *                 type: number
  *     responses:
  *       200:
- *         description: Vote recorded
+ *         description: Vote toggled (added or removed)
  *       403:
  *         description: Unauthorized (not a member or out of range)
- *       409:
- *         description: Already voted
  */
 router.post('/:id/tracks/:trackId/vote', validate(voteSchema), eventController.voteForTrack);
 
