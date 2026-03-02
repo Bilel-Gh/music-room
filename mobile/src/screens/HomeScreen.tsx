@@ -87,6 +87,7 @@ export default function HomeScreen() {
   const [nearbyEvent, setNearbyEvent] = useState<{ event: Event; distanceKm: number } | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const proximityChecked = useRef(false);
+  const userCoordsRef = useRef<{ lat: number; lon: number } | null>(null);
 
   const loadCachedData = useCallback(async () => {
     try {
@@ -155,28 +156,45 @@ export default function HomeScreen() {
 
     const handleEventCreated = (data: { event: Event }) => {
       setEvents(prev => [data.event, ...prev]);
+
+      // iBeacon real-time: check if the new event is nearby
+      const coords = userCoordsRef.current;
+      if (coords && data.event.latitude != null && data.event.longitude != null) {
+        const dist = haversineDistance(coords.lat, coords.lon, data.event.latitude, data.event.longitude);
+        if (dist <= IBEACON_RADIUS_KM) {
+          setNearbyEvent({ event: data.event, distanceKm: dist });
+          setBannerDismissed(false);
+        }
+      }
     };
     const handlePlaylistCreated = (data: { playlist: Playlist }) => {
       setPlaylists(prev => [data.playlist, ...prev]);
     };
 
+    const handleEventDeleted = (data: { eventId: string }) => {
+      setEvents(prev => prev.filter(e => e.id !== data.eventId));
+      setNearbyEvent(prev => prev?.event.id === data.eventId ? null : prev);
+    };
+    const handlePlaylistDeleted = (data: { playlistId: string }) => {
+      setPlaylists(prev => prev.filter(p => p.id !== data.playlistId));
+    };
+
     socket.on('eventCreated', handleEventCreated);
     socket.on('playlistCreated', handlePlaylistCreated);
+    socket.on('eventDeleted', handleEventDeleted);
+    socket.on('playlistDeleted', handlePlaylistDeleted);
 
     return () => {
       socket.off('eventCreated', handleEventCreated);
       socket.off('playlistCreated', handlePlaylistCreated);
+      socket.off('eventDeleted', handleEventDeleted);
+      socket.off('playlistDeleted', handlePlaylistDeleted);
     };
   }, [feedMode]);
 
-  // iBeacon simulation — scan for nearby LOCATION_TIME events
+  // iBeacon simulation — get user location once, then scan existing events
   useEffect(() => {
-    if (proximityChecked.current || feedMode !== 'public' || events.length === 0) return;
-
-    const geoEvents = events.filter(e => e.latitude != null && e.longitude != null);
-    if (geoEvents.length === 0) return;
-
-    proximityChecked.current = true;
+    if (proximityChecked.current || feedMode !== 'public') return;
 
     (async () => {
       try {
@@ -184,9 +202,15 @@ export default function HomeScreen() {
         if (status !== 'granted') return;
 
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        const userLat = loc.coords.latitude;
-        const userLon = loc.coords.longitude;
+        userCoordsRef.current = { lat: loc.coords.latitude, lon: loc.coords.longitude };
 
+        if (events.length === 0) return;
+        proximityChecked.current = true;
+
+        const geoEvents = events.filter(e => e.latitude != null && e.longitude != null);
+        if (geoEvents.length === 0) return;
+
+        const { lat: userLat, lon: userLon } = userCoordsRef.current;
         let closest: { event: Event; distanceKm: number } | null = null;
 
         for (const ev of geoEvents) {
@@ -227,6 +251,7 @@ export default function HomeScreen() {
           try {
             await api.delete(`/events/${eventId}`);
             setEvents(prev => prev.filter(e => e.id !== eventId));
+            setNearbyEvent(prev => prev?.event.id === eventId ? null : prev);
           } catch (err: unknown) {
             const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
               || 'Impossible de supprimer';

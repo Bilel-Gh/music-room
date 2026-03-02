@@ -60,7 +60,10 @@ export async function updateEvent(req: Request, res: Response, next: NextFunctio
 
 export async function deleteEvent(req: Request, res: Response, next: NextFunction) {
   try {
-    await eventService.deleteEvent(req.params.id as string, req.user!.userId);
+    const eventId = req.params.id as string;
+    await eventService.deleteEvent(eventId, req.user!.userId);
+    const io = getIO();
+    if (io) io.emit('eventDeleted', { eventId });
     res.status(204).send();
   } catch (err) {
     next(err);

@@ -65,7 +65,10 @@ export async function updatePlaylist(req: Request, res: Response, next: NextFunc
 
 export async function deletePlaylist(req: Request, res: Response, next: NextFunction) {
   try {
-    await playlistService.deletePlaylist(req.params.id as string, req.user!.userId);
+    const playlistId = req.params.id as string;
+    await playlistService.deletePlaylist(playlistId, req.user!.userId);
+    const io = getIO();
+    if (io) io.emit('playlistDeleted', { playlistId });
     res.status(204).send();
   } catch (err) {
     next(err);

@@ -8,7 +8,9 @@ interface ServerToClientEvents {
   playlistTrackRemoved: (data: { playlistId: string; tracks: unknown[] }) => void;
   playlistTrackReordered: (data: { playlistId: string; tracks: unknown[] }) => void;
   eventCreated: (data: { event: unknown }) => void;
+  eventDeleted: (data: { eventId: string }) => void;
   playlistCreated: (data: { playlist: unknown }) => void;
+  playlistDeleted: (data: { playlistId: string }) => void;
   friendRequestReceived: (data: { from: { id: string; name: string; email: string } }) => void;
   invitationReceived: (data: { type: 'event' | 'playlist'; name: string }) => void;
 }
