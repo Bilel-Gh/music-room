@@ -114,11 +114,11 @@ export default function NotificationsScreen() {
     try {
       await api.put(`/users/friend-requests/${friendId}/accept`);
       setRequests(prev => prev.filter(r => r.id !== friendId));
-      crossAlert('Succes', 'Demande acceptee');
+      crossAlert('Success', 'Request accepted');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'accepter';
-      crossAlert('Erreur', msg);
+        || 'Unable to accept';
+      crossAlert('Error', msg);
     } finally {
       setBusyId(null);
     }
@@ -131,8 +131,8 @@ export default function NotificationsScreen() {
       setRequests(prev => prev.filter(r => r.id !== friendId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible de refuser';
-      crossAlert('Erreur', msg);
+        || 'Unable to decline';
+      crossAlert('Error', msg);
     } finally {
       setBusyId(null);
     }
@@ -143,11 +143,11 @@ export default function NotificationsScreen() {
     try {
       await api.post(`/events/${eventId}/accept`);
       setInvitations(prev => prev.filter(i => i.event.id !== eventId));
-      crossAlert('Succes', 'Invitation acceptee');
+      crossAlert('Success', 'Invitation accepted');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'accepter';
-      crossAlert('Erreur', msg);
+        || 'Unable to accept';
+      crossAlert('Error', msg);
     } finally {
       setBusyId(null);
     }
@@ -160,8 +160,8 @@ export default function NotificationsScreen() {
       setInvitations(prev => prev.filter(i => i.event.id !== eventId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible de refuser';
-      crossAlert('Erreur', msg);
+        || 'Unable to decline';
+      crossAlert('Error', msg);
     } finally {
       setBusyId(null);
     }
@@ -172,11 +172,11 @@ export default function NotificationsScreen() {
     try {
       await api.post(`/playlists/${playlistId}/accept`);
       setPlaylistInvitations(prev => prev.filter(i => i.playlist.id !== playlistId));
-      crossAlert('Succes', 'Invitation acceptee');
+      crossAlert('Success', 'Invitation accepted');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'accepter';
-      crossAlert('Erreur', msg);
+        || 'Unable to accept';
+      crossAlert('Error', msg);
     } finally {
       setBusyId(null);
     }
@@ -189,8 +189,8 @@ export default function NotificationsScreen() {
       setPlaylistInvitations(prev => prev.filter(i => i.playlist.id !== playlistId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible de refuser';
-      crossAlert('Erreur', msg);
+        || 'Unable to decline';
+      crossAlert('Error', msg);
     } finally {
       setBusyId(null);
     }
@@ -216,14 +216,13 @@ export default function NotificationsScreen() {
         {isEmpty ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-off-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>Aucune notification</Text>
+            <Text style={styles.emptyText}>No notifications</Text>
           </View>
         ) : (
           <>
-            {/* Event invitations */}
             {invitations.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>Invitations evenements</Text>
+                <Text style={styles.sectionTitle}>Event invitations</Text>
                 {invitations.map(inv => {
                   const busy = busyId === `event-${inv.event.id}`;
                   return (
@@ -234,8 +233,8 @@ export default function NotificationsScreen() {
                         </View>
                         <View style={styles.textBlock}>
                           <Text style={styles.reqName} numberOfLines={1}>{inv.event.name}</Text>
-                          <Text style={styles.reqEmail}>Par {inv.event.creator.name}</Text>
-                          <Text style={styles.inviteLabel}>Invitation a un evenement</Text>
+                          <Text style={styles.reqEmail}>By {inv.event.creator.name}</Text>
+                          <Text style={styles.inviteLabel}>Event invitation</Text>
                         </View>
                       </View>
 
@@ -263,10 +262,9 @@ export default function NotificationsScreen() {
               </>
             )}
 
-            {/* Playlist invitations */}
             {playlistInvitations.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>Invitations playlists</Text>
+                <Text style={styles.sectionTitle}>Playlist invitations</Text>
                 {playlistInvitations.map(inv => {
                   const busy = busyId === `playlist-${inv.playlist.id}`;
                   return (
@@ -277,8 +275,8 @@ export default function NotificationsScreen() {
                         </View>
                         <View style={styles.textBlock}>
                           <Text style={styles.reqName} numberOfLines={1}>{inv.playlist.name}</Text>
-                          <Text style={styles.reqEmail}>Par {inv.playlist.creator.name}</Text>
-                          <Text style={styles.inviteLabel}>Invitation a une playlist</Text>
+                          <Text style={styles.reqEmail}>By {inv.playlist.creator.name}</Text>
+                          <Text style={styles.inviteLabel}>Playlist invitation</Text>
                         </View>
                       </View>
 
@@ -306,10 +304,9 @@ export default function NotificationsScreen() {
               </>
             )}
 
-            {/* Friend requests */}
             {requests.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>Demandes d'amis</Text>
+                <Text style={styles.sectionTitle}>Friend requests</Text>
                 {requests.map(req => {
                   const busy = busyId === `friend-${req.id}`;
                   return (
@@ -324,7 +321,7 @@ export default function NotificationsScreen() {
                         <View style={styles.textBlock}>
                           <Text style={styles.reqName}>{req.name}</Text>
                           <Text style={styles.reqEmail}>{req.email}</Text>
-                          <Text style={[styles.reqLabel, { color: colors.primary }]}>Demande d'ami</Text>
+                          <Text style={[styles.reqLabel, { color: colors.primary }]}>Friend request</Text>
                         </View>
                       </TouchableOpacity>
 

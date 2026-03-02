@@ -113,7 +113,7 @@ describe('POST /api/auth/refresh', () => {
 
 describe('POST /api/auth/verify-email', () => {
   it('should verify email with correct code', async () => {
-    // Récupérer le code depuis la BDD
+    // Retrieve the code from the database
     const user = await prisma.user.findUnique({ where: { email: testEmail } });
     const code = user!.verificationCode!;
 
@@ -184,7 +184,7 @@ describe('PUT /api/auth/link-google', () => {
   });
 
   it('should link google to authenticated user', async () => {
-    // Re-login pour avoir un token frais
+    // Re-login to get a fresh token
     const loginRes = await request(app)
       .post('/api/auth/login')
       .send({ email: testEmail, password: 'newpassword456' });

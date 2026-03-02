@@ -242,10 +242,10 @@ export default function HomeScreen() {
   };
 
   const handleDeleteEvent = (eventId: string, name: string) => {
-    crossAlert('Supprimer', `Supprimer "${name}" ?`, [
-      { text: 'Annuler', style: 'cancel' },
+    crossAlert('Delete', `Delete "${name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -254,8 +254,8 @@ export default function HomeScreen() {
             setNearbyEvent(prev => prev?.event.id === eventId ? null : prev);
           } catch (err: unknown) {
             const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-              || 'Impossible de supprimer';
-            crossAlert('Erreur', msg);
+              || 'Unable to delete';
+            crossAlert('Error', msg);
           }
         },
       },
@@ -263,10 +263,10 @@ export default function HomeScreen() {
   };
 
   const handleDeletePlaylist = (playlistId: string, name: string) => {
-    crossAlert('Supprimer', `Supprimer "${name}" ?`, [
-      { text: 'Annuler', style: 'cancel' },
+    crossAlert('Delete', `Delete "${name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -274,8 +274,8 @@ export default function HomeScreen() {
             setPlaylists(prev => prev.filter(p => p.id !== playlistId));
           } catch (err: unknown) {
             const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-              || 'Impossible de supprimer';
-            crossAlert('Erreur', msg);
+              || 'Unable to delete';
+            crossAlert('Error', msg);
           }
         },
       },
@@ -372,7 +372,7 @@ export default function HomeScreen() {
                 {nearbyEvent.event.name}
               </Text>
               <Text style={styles.beaconSubtitle}>
-                Evenement a {nearbyEvent.distanceKm.toFixed(1)} km — Appuyez pour rejoindre
+                Event {nearbyEvent.distanceKm.toFixed(1)} km away — Tap to join
               </Text>
             </View>
           </View>
@@ -400,7 +400,7 @@ export default function HomeScreen() {
           onPress={() => switchFeedMode('mine')}
         >
           <Text style={[styles.feedBtnText, feedMode === 'mine' && styles.feedBtnTextActive]}>
-            Mes items
+            My Items
           </Text>
         </TouchableOpacity>
       </View>
@@ -411,7 +411,7 @@ export default function HomeScreen() {
           onPress={() => setActiveTab('events')}
         >
           <Text style={[styles.tabText, activeTab === 'events' && [styles.tabTextActive, { color: colors.primary }]]}>
-            Evenements ({events.length})
+            Events ({events.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -434,12 +434,12 @@ export default function HomeScreen() {
           ListHeaderComponent={
             isConnected ? (
               <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.primary }]} onPress={() => navigation.navigate('CreateEvent')}>
-                <Text style={styles.createButtonText}>+ Nouvel evenement</Text>
+                <Text style={styles.createButtonText}>+ New Event</Text>
               </TouchableOpacity>
             ) : null
           }
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Aucun evenement pour le moment</Text>
+            <Text style={styles.emptyText}>No events yet</Text>
           }
         />
       ) : (
@@ -452,12 +452,12 @@ export default function HomeScreen() {
           ListHeaderComponent={
             isConnected ? (
               <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.primary }]} onPress={() => navigation.navigate('CreatePlaylist')}>
-                <Text style={styles.createButtonText}>+ Nouvelle playlist</Text>
+                <Text style={styles.createButtonText}>+ New Playlist</Text>
               </TouchableOpacity>
             ) : null
           }
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Aucune playlist pour le moment</Text>
+            <Text style={styles.emptyText}>No playlists yet</Text>
           }
         />
       )}

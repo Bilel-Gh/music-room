@@ -85,7 +85,7 @@ describe('CRUD /api/playlists', () => {
       .set('Authorization', `Bearer ${strangerToken}`);
 
     expect(res.status).toBe(200);
-    // seule "Chill Vibes" est publique
+    // only "Chill Vibes" is public
     const names = res.body.data.map((p: { name: string }) => p.name);
     expect(names).toContain('Chill Vibes');
     expect(names).not.toContain('Private Mix');
@@ -238,7 +238,7 @@ describe('Tracks — add, list, permissions', () => {
 });
 
 describe('Reorder tracks', () => {
-  // Etat initial : A(0), B(1), C(2)
+  // Initial state: A(0), B(1), C(2)
 
   it('should move C from position 2 to 0', async () => {
     const res = await request(app)
@@ -248,7 +248,7 @@ describe('Reorder tracks', () => {
 
     expect(res.status).toBe(200);
     const titles = res.body.data.map((t: { title: string }) => t.title);
-    // Attendu : C(0), A(1), B(2)
+    // Expected: C(0), A(1), B(2)
     expect(titles).toEqual(['Track C', 'Track A', 'Track B']);
   });
 
@@ -260,7 +260,7 @@ describe('Reorder tracks', () => {
 
     expect(res.status).toBe(200);
     const titles = res.body.data.map((t: { title: string }) => t.title);
-    // Attendu : A(0), B(1), C(2)
+    // Expected: A(0), B(1), C(2)
     expect(titles).toEqual(['Track A', 'Track B', 'Track C']);
   });
 
@@ -272,7 +272,7 @@ describe('Reorder tracks', () => {
 
     expect(res.status).toBe(200);
     const titles = res.body.data.map((t: { title: string }) => t.title);
-    // Attendu : B(0), A(1), C(2)
+    // Expected: B(0), A(1), C(2)
     expect(titles).toEqual(['Track B', 'Track A', 'Track C']);
   });
 
@@ -288,14 +288,14 @@ describe('Reorder tracks', () => {
 
 describe('Remove tracks', () => {
   it('should remove middle track and reindex', async () => {
-    // Etat : B(0), A(1), C(2) — on supprime A
+    // State: B(0), A(1), C(2) — removing A
     const res = await request(app)
       .delete(`/api/playlists/${invitePlaylistId}/tracks/${trackAId}`)
       .set('Authorization', `Bearer ${editorToken}`);
 
     expect(res.status).toBe(204);
 
-    // Verifier les positions
+    // Verify positions
     const listRes = await request(app)
       .get(`/api/playlists/${invitePlaylistId}/tracks`)
       .set('Authorization', `Bearer ${editorToken}`);

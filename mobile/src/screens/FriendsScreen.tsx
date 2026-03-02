@@ -96,22 +96,22 @@ export default function FriendsScreen() {
     setSendingTo(userId);
     try {
       await api.post(`/users/friend-requests/${userId}`);
-      crossAlert('Succes', 'Demande d\'ami envoyee !');
+      crossAlert('Success', 'Friend request sent!');
       setSearchResults(prev => prev.filter(u => u.id !== userId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'envoyer la demande';
-      crossAlert('Erreur', msg);
+        || 'Unable to send request';
+      crossAlert('Error', msg);
     } finally {
       setSendingTo(null);
     }
   };
 
   const handleRemoveFriend = (friendId: string, friendName: string) => {
-    crossAlert('Retirer', `Retirer ${friendName} de vos amis ?`, [
-      { text: 'Annuler', style: 'cancel' },
+    crossAlert('Remove', `Remove ${friendName} from your friends?`, [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Retirer',
+        text: 'Remove',
         style: 'destructive',
         onPress: async () => {
           setRemovingId(friendId);
@@ -119,7 +119,7 @@ export default function FriendsScreen() {
             await api.delete(`/users/friends/${friendId}`);
             setFriends(prev => prev.filter(f => f.id !== friendId));
           } catch {
-            crossAlert('Erreur', 'Impossible de retirer cet ami');
+            crossAlert('Error', 'Unable to remove this friend');
           } finally {
             setRemovingId(null);
           }
@@ -146,7 +146,7 @@ export default function FriendsScreen() {
       >
         {/* Search section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Rechercher</Text>
+          <Text style={styles.sectionTitle}>Search</Text>
           <TextInput
             style={styles.searchInput}
             placeholder="Nom ou email..."
@@ -179,7 +179,7 @@ export default function FriendsScreen() {
                 {sendingTo === user.id ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={styles.actionBtnText}>Ajouter</Text>
+                  <Text style={styles.actionBtnText}>Add</Text>
                 )}
               </TouchableOpacity>
             </TouchableOpacity>
@@ -188,9 +188,9 @@ export default function FriendsScreen() {
 
         {/* Friends list */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mes amis ({friends.length})</Text>
+          <Text style={styles.sectionTitle}>My friends ({friends.length})</Text>
           {friends.length === 0 ? (
-            <Text style={styles.emptyText}>Aucun ami pour le moment</Text>
+            <Text style={styles.emptyText}>No friends yet</Text>
           ) : (
             friends.map(friend => (
               <TouchableOpacity

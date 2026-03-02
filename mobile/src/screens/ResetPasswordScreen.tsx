@@ -28,28 +28,28 @@ export default function ResetPasswordScreen({ navigation }: Props) {
 
   const handleReset = async () => {
     if (!token.trim()) {
-      crossAlert('Erreur', 'Veuillez entrer le token');
+      crossAlert('Error', 'Please enter the token');
       return;
     }
     if (password.length < 8) {
-      crossAlert('Erreur', 'Le mot de passe doit faire au moins 8 caracteres');
+      crossAlert('Error', 'Password must be at least 8 characters');
       return;
     }
     if (password !== confirmPassword) {
-      crossAlert('Erreur', 'Les mots de passe ne correspondent pas');
+      crossAlert('Error', 'Passwords do not match');
       return;
     }
 
     setLoading(true);
     try {
       await api.post('/auth/reset-password', { token: token.trim(), password });
-      crossAlert('Succes', 'Mot de passe reinitialise', [
+      crossAlert('Success', 'Password reset successfully', [
         { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible de reinitialiser';
-      crossAlert('Erreur', msg);
+        || 'Unable to reset password';
+      crossAlert('Error', msg);
     } finally {
       setLoading(false);
     }
@@ -61,14 +61,14 @@ export default function ResetPasswordScreen({ navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={[styles.inner, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]}>
-        <Text style={styles.title}>Reinitialiser le mot de passe</Text>
+        <Text style={styles.title}>Reset your password</Text>
         <Text style={styles.subtitle}>
-          Entrez le token recu et votre nouveau mot de passe
+          Enter the token you received and your new password
         </Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Token de reinitialisation"
+          placeholder="Reset token"
           placeholderTextColor="#999"
           value={token}
           onChangeText={setToken}
@@ -77,7 +77,7 @@ export default function ResetPasswordScreen({ navigation }: Props) {
 
         <TextInput
           style={styles.input}
-          placeholder="Nouveau mot de passe (8 car. min)"
+          placeholder="New password (8 char. min)"
           placeholderTextColor="#999"
           value={password}
           onChangeText={setPassword}
@@ -86,7 +86,7 @@ export default function ResetPasswordScreen({ navigation }: Props) {
 
         <TextInput
           style={styles.input}
-          placeholder="Confirmer le mot de passe"
+          placeholder="Confirm password"
           placeholderTextColor="#999"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
@@ -101,12 +101,12 @@ export default function ResetPasswordScreen({ navigation }: Props) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Reinitialiser</Text>
+            <Text style={styles.buttonText}>Reset</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={[styles.linkText, { color: colors.primary }]}>Retour a la connexion</Text>
+          <Text style={[styles.linkText, { color: colors.primary }]}>Back to login</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

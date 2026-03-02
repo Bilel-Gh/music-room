@@ -2,8 +2,8 @@ import rateLimit from 'express-rate-limit';
 
 const skipInTest = () => !!(process.env.NODE_ENV === 'test' || process.env.VITEST);
 
-// Limite stricte sur les routes d'auth sensibles (login, register, forgot-password)
-// 5 tentatives par fenetre de 15 minutes par IP
+// Strict limit on sensitive auth routes (login, register, forgot-password)
+// 5 attempts per 15-minute window per IP
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -16,7 +16,7 @@ export const authLimiter = rateLimit({
   },
 });
 
-// Limite globale plus souple pour l'API entiere
+// Softer global limit for the entire API
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,

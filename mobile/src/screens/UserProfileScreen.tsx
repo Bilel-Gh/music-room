@@ -53,7 +53,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       const { data } = await api.get(`/users/${userId}`);
       setUser(data.data as UserData);
     } catch {
-      crossAlert('Erreur', 'Impossible de charger le profil');
+      crossAlert('Error', 'Unable to load profile');
     } finally {
       setLoading(false);
     }
@@ -64,10 +64,10 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     try {
       await api.post(`/users/friend-requests/${userId}`);
       setRequestSent(true);
-      crossAlert('Succes', 'Demande d\'ami envoyee !');
+      crossAlert('Success', 'Friend request sent!');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'envoyer la demande';
+        || 'Unable to send request';
       crossAlert('Info', msg);
     } finally {
       setSendingRequest(false);
@@ -86,7 +86,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     return (
       <View style={styles.centered}>
         <Ionicons name="person-outline" size={48} color="#ccc" />
-        <Text style={styles.errorText}>Utilisateur introuvable</Text>
+        <Text style={styles.errorText}>User not found</Text>
       </View>
     );
   }
@@ -109,29 +109,28 @@ export default function UserProfileScreen({ route, navigation }: Props) {
         {isFriend && (
           <View style={[styles.friendBadge, { backgroundColor: colors.primaryLight }]}>
             <Ionicons name="people" size={14} color={colors.primary} />
-            <Text style={styles.friendBadgeText}>Ami</Text>
+            <Text style={styles.friendBadgeText}>Friend</Text>
           </View>
         )}
       </View>
 
-      {/* Info cards */}
       {hasPublicInfo && (
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>Info publique</Text>
+          <Text style={styles.cardLabel}>Public info</Text>
           <Text style={styles.cardValue}>{user.publicInfo}</Text>
         </View>
       )}
 
       {hasFriendsInfo && (
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>Info amis</Text>
+          <Text style={styles.cardLabel}>Friends info</Text>
           <Text style={styles.cardValue}>{user.friendsInfo}</Text>
         </View>
       )}
 
       {hasMusicPrefs && (
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>Preferences musicales</Text>
+          <Text style={styles.cardLabel}>Music preferences</Text>
           <View style={styles.tagsRow}>
             {user.musicPreferences!.map((pref, i) => (
               <View key={i} style={[styles.tag, { backgroundColor: colors.primaryLight }]}>
@@ -142,11 +141,10 @@ export default function UserProfileScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Empty state */}
       {!hasAnyInfo && (
         <View style={styles.emptyCard}>
           <Ionicons name="information-circle-outline" size={32} color="#ccc" />
-          <Text style={styles.emptyText}>Aucune information publique</Text>
+          <Text style={styles.emptyText}>No public information</Text>
         </View>
       )}
 
@@ -162,7 +160,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
           ) : (
             <>
               <Ionicons name="person-add-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.addFriendText}>Ajouter en ami</Text>
+              <Text style={styles.addFriendText}>Add as friend</Text>
             </>
           )}
         </TouchableOpacity>
@@ -171,7 +169,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       {requestSent && (
         <View style={styles.sentBadge}>
           <Ionicons name="checkmark-circle-outline" size={18} color="#16a34a" />
-          <Text style={styles.sentText}>Demande envoyee</Text>
+          <Text style={styles.sentText}>Request sent</Text>
         </View>
       )}
     </ScrollView>

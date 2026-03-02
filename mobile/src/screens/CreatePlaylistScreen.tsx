@@ -35,7 +35,7 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
 
   const handleCreate = async () => {
     if (!name.trim() || name.trim().length < 2) {
-      crossAlert('Erreur', 'Le nom doit faire au moins 2 caracteres');
+      crossAlert('Error', 'Name must be at least 2 characters');
       return;
     }
 
@@ -57,8 +57,8 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
       navigation.replace('Playlist', { playlistId: data.data.id });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible de creer la playlist';
-      crossAlert('Erreur', msg);
+        || 'Unable to create playlist';
+      crossAlert('Error', msg);
     } finally {
       setCreating(false);
     }
@@ -86,12 +86,12 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={[styles.scroll, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]} keyboardShouldPersistTaps="handled">
-      <Text style={styles.label}>Nom *</Text>
+      <Text style={styles.label}>Name *</Text>
       <TextInput
         style={styles.input}
         value={name}
         onChangeText={setName}
-        placeholder="Nom de la playlist"
+        placeholder="Playlist name"
         placeholderTextColor="#999"
       />
 
@@ -100,13 +100,13 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
         style={[styles.input, styles.multiline]}
         value={description}
         onChangeText={setDescription}
-        placeholder="Description (optionnel)"
+        placeholder="Description (optional)"
         placeholderTextColor="#999"
         multiline
       />
 
       <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Playlist publique</Text>
+        <Text style={styles.switchLabel}>Public playlist</Text>
         <Switch
           value={isPublic}
           onValueChange={setIsPublic}
@@ -114,7 +114,7 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
         />
       </View>
 
-      <Text style={styles.label}>Type de licence</Text>
+      <Text style={styles.label}>License type</Text>
       <View style={styles.licenseRow}>
         {(['OPEN', 'INVITE_ONLY'] as LicenseType[]).map((type) => (
           <TouchableOpacity
@@ -123,15 +123,15 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
             onPress={() => setLicenseType(type)}
           >
             <Text style={[styles.licenseBtnText, licenseType === type && { color: colors.primary, fontWeight: '600' as const }]}>
-              {type === 'OPEN' ? 'Ouvert' : 'Sur invitation'}
+              {type === 'OPEN' ? 'Open' : 'Invite Only'}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
       <Text style={styles.licenseHint}>
         {licenseType === 'OPEN'
-          ? 'Tout le monde peut ajouter et modifier les tracks'
-          : 'Seuls les invites avec permission "Editeur" peuvent modifier les tracks'}
+          ? 'Anyone can add and edit tracks'
+          : 'Only invited users with "Editor" permission can edit tracks'}
       </Text>
 
       <TouchableOpacity
@@ -142,7 +142,7 @@ export default function CreatePlaylistScreen({ navigation }: Props) {
         {creating ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.createBtnText}>Creer la playlist</Text>
+          <Text style={styles.createBtnText}>Create playlist</Text>
         )}
       </TouchableOpacity>
     </ScrollView>

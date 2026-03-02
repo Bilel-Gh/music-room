@@ -16,7 +16,7 @@ let trackId: string;
 let inviteEventId: string;
 
 beforeAll(async () => {
-  // Nettoyage
+  // Cleanup
   await prisma.vote.deleteMany({});
   await prisma.track.deleteMany({});
   await prisma.eventMember.deleteMany({});
@@ -208,7 +208,7 @@ describe('Voting', () => {
   });
 
   it('should reject vote on INVITE_ONLY event if not member', async () => {
-    // D'abord ajouter une track avec le créateur sur l'event invite-only
+    // First add a track with the creator on the invite-only event
     const trackRes = await request(app)
       .post(`/api/events/${inviteEventId}/tracks`)
       .set('Authorization', `Bearer ${creatorToken}`)
@@ -231,7 +231,7 @@ describe('Voting', () => {
 
     expect(res.status).toBe(200);
     const tracks = res.body.data;
-    // "So What" a 2 votes, "Take Five" en a 0
+    // "So What" has 2 votes, "Take Five" has 0
     expect(tracks[0].title).toBe('So What');
     expect(tracks[0].voteCount).toBe(2);
     expect(tracks[1].voteCount).toBe(0);

@@ -9,7 +9,7 @@ export default function OfflineBanner() {
   return (
     <View style={styles.banner}>
       <Ionicons name="cloud-offline-outline" size={16} color="#fff" />
-      <Text style={styles.text}>Mode Hors-Ligne (Lecture seule)</Text>
+      <Text style={styles.text}>Offline Mode (Read-only)</Text>
     </View>
   );
 }

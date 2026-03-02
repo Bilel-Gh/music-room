@@ -27,20 +27,20 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
 
   const handleVerify = async () => {
     if (code.length !== 6) {
-      crossAlert('Erreur', 'Le code doit contenir 6 chiffres');
+      crossAlert('Error', 'Code must contain 6 digits');
       return;
     }
 
     setLoading(true);
     try {
       await api.post('/auth/verify-email', { email, code });
-      crossAlert('Succes', 'Email verifie !', [
+      crossAlert('Success', 'Email verified!', [
         { text: 'OK', onPress: () => navigation.navigate('MainTabs') },
       ]);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Code invalide';
-      crossAlert('Erreur', msg);
+        || 'Invalid code';
+      crossAlert('Error', msg);
     } finally {
       setLoading(false);
     }
@@ -56,12 +56,12 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={[styles.inner, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]}>
-        <Text style={styles.title}>Verification de l'email</Text>
+        <Text style={styles.title}>Email verification</Text>
         <Text style={styles.subtitle}>
-          Un code a 6 chiffres a ete envoye a {email}
+          A 6-digit code was sent to {email}
         </Text>
         <Text style={styles.hint}>
-          (En mode dev, le code est affiche dans les logs du serveur)
+          (In dev mode, the code is displayed in server logs)
         </Text>
 
         <TextInput
@@ -83,12 +83,12 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Verifier</Text>
+            <Text style={styles.buttonText}>Verify</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleSkip}>
-          <Text style={styles.skipText}>Passer pour le moment</Text>
+          <Text style={styles.skipText}>Skip for now</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

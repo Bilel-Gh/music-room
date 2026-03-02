@@ -11,7 +11,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor : ajoute le token JWT + metadata device a chaque requete
+// Adds JWT token + device metadata to every request
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
   if (token) {
@@ -25,7 +25,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor : refresh le token si 401
+// Refresh token on 401
 api.interceptors.response.use(
   (response) => response,
   async (error) => {

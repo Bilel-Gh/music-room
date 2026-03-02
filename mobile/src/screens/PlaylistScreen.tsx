@@ -65,7 +65,6 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   const [adding, setAdding] = useState(false);
   const [busyTrackId, setBusyTrackId] = useState<string | null>(null);
 
-  // Invite modal
   const [inviteVisible, setInviteVisible] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(false);
@@ -93,17 +92,17 @@ export default function PlaylistScreen({ route, navigation }: Props) {
   }, [playlistId]);
 
   const handleDelete = useCallback(() => {
-    crossAlert('Supprimer', 'Supprimer cette playlist ?', [
-      { text: 'Annuler', style: 'cancel' },
+    crossAlert('Delete', 'Delete this playlist?', [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
             await api.delete(`/playlists/${playlistId}`);
             navigation.goBack();
           } catch {
-            crossAlert('Erreur', 'Impossible de supprimer');
+            crossAlert('Error', 'Unable to delete');
           }
         },
       },
@@ -124,7 +123,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
       }
       setInviteCanEdit(defaults);
     } catch {
-      crossAlert('Erreur', 'Impossible de charger la liste d\'amis');
+      crossAlert('Error', 'Unable to load friends list');
     } finally {
       setLoadingFriends(false);
     }
@@ -165,7 +164,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
       setPlaylist(plRes.data.data);
       setTracks(tracksRes.data.data);
     } catch {
-      crossAlert('Erreur', 'Impossible de charger la playlist');
+      crossAlert('Error', 'Unable to load playlist');
     } finally {
       setLoading(false);
     }
@@ -194,12 +193,12 @@ export default function PlaylistScreen({ route, navigation }: Props) {
         userId: friendId,
         canEdit: inviteCanEdit[friendId] ?? true,
       });
-      crossAlert('Succes', 'Invitation envoyee');
+      crossAlert('Success', 'Invitation sent');
       setFriends(prev => prev.filter(f => f.id !== friendId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'inviter';
-      crossAlert('Erreur', msg);
+        || 'Unable to invite';
+      crossAlert('Error', msg);
     } finally {
       setInvitingId(null);
     }
@@ -207,11 +206,11 @@ export default function PlaylistScreen({ route, navigation }: Props) {
 
   const handleAddTrack = async () => {
     if (!useNetworkStore.getState().isConnected) {
-      crossAlert('Mode Hors-Ligne', 'Cette action necessite une connexion internet.');
+      crossAlert('Offline Mode', 'This action requires an internet connection.');
       return;
     }
     if (!title.trim() || !artist.trim()) {
-      crossAlert('Erreur', 'Titre et artiste requis');
+      crossAlert('Error', 'Title and artist required');
       return;
     }
 
@@ -226,8 +225,8 @@ export default function PlaylistScreen({ route, navigation }: Props) {
       setArtist('');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'ajouter la track';
-      crossAlert('Erreur', msg);
+        || 'Unable to add track';
+      crossAlert('Error', msg);
     } finally {
       setAdding(false);
     }
@@ -235,13 +234,13 @@ export default function PlaylistScreen({ route, navigation }: Props) {
 
   const handleDeleteTrack = async (trackId: string) => {
     if (!useNetworkStore.getState().isConnected) {
-      crossAlert('Mode Hors-Ligne', 'Cette action necessite une connexion internet.');
+      crossAlert('Offline Mode', 'This action requires an internet connection.');
       return;
     }
-    crossAlert('Supprimer', 'Retirer cette track de la playlist ?', [
-      { text: 'Annuler', style: 'cancel' },
+    crossAlert('Delete', 'Remove this track from the playlist?', [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           setBusyTrackId(trackId);
@@ -249,8 +248,8 @@ export default function PlaylistScreen({ route, navigation }: Props) {
             await api.delete(`/playlists/${playlistId}/tracks/${trackId}`);
           } catch (err: unknown) {
             const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-              || 'Impossible de supprimer';
-            crossAlert('Erreur', msg);
+              || 'Unable to delete';
+            crossAlert('Error', msg);
           } finally {
             setBusyTrackId(null);
           }
@@ -261,7 +260,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
 
   const handleMove = async (trackId: string, currentPos: number, direction: 'up' | 'down') => {
     if (!useNetworkStore.getState().isConnected) {
-      crossAlert('Mode Hors-Ligne', 'Cette action necessite une connexion internet.');
+      crossAlert('Offline Mode', 'This action requires an internet connection.');
       return;
     }
     const newPosition = direction === 'up' ? currentPos - 1 : currentPos + 1;
@@ -275,8 +274,8 @@ export default function PlaylistScreen({ route, navigation }: Props) {
       setTracks(data.data);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible de deplacer';
-      crossAlert('Erreur', msg);
+        || 'Unable to move';
+      crossAlert('Error', msg);
     } finally {
       setBusyTrackId(null);
     }
@@ -337,18 +336,17 @@ export default function PlaylistScreen({ route, navigation }: Props) {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
         <OfflineBanner />
-        {/* License badge */}
         <View style={[styles.headerInfo, contentMaxWidth ? { maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]}>
           <View style={[styles.licenseBadge,
             playlist?.licenseType === 'OPEN' ? styles.lbOpen : styles.lbInvite
           ]}>
             <Text style={styles.licenseBadgeText}>
-              {playlist?.licenseType === 'OPEN' ? 'Ouvert' : 'Sur invitation'}
+              {playlist?.licenseType === 'OPEN' ? 'Open' : 'Invite Only'}
             </Text>
           </View>
           {!playlist?.isPublic && (
             <View style={styles.privateBadge}>
-              <Text style={styles.privateBadgeText}>Prive</Text>
+              <Text style={styles.privateBadgeText}>Private</Text>
             </View>
           )}
         </View>
@@ -361,7 +359,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
         {!canEdit && playlist?.licenseType === 'INVITE_ONLY' && !premiumEnabled && (
           <View style={styles.readOnlyBanner}>
             <Ionicons name="eye-outline" size={16} color="#1e40af" />
-            <Text style={styles.readOnlyText}>Lecture seule — vous ne pouvez pas modifier cette playlist</Text>
+            <Text style={styles.readOnlyText}>Read-only — you cannot edit this playlist</Text>
           </View>
         )}
 
@@ -378,11 +376,11 @@ export default function PlaylistScreen({ route, navigation }: Props) {
         {/* Add track form - only for editors */}
         {canEdit && (
           <View style={styles.addForm}>
-            <Text style={styles.formTitle}>Ajouter une track</Text>
+            <Text style={styles.formTitle}>Add a track</Text>
             <View style={styles.formRow}>
               <TextInput
                 style={[styles.formInput, { flex: 1, marginRight: 8 }]}
-                placeholder="Titre"
+                placeholder="Title"
                 placeholderTextColor="#999"
                 value={title}
                 onChangeText={setTitle}
@@ -392,7 +390,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
               />
               <TextInput
                 style={[styles.formInput, { flex: 1 }]}
-                placeholder="Artiste"
+                placeholder="Artist"
                 placeholderTextColor="#999"
                 value={artist}
                 onChangeText={setArtist}
@@ -409,7 +407,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
               {adding ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.addButtonText}>Ajouter</Text>
+                <Text style={styles.addButtonText}>Add</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -426,7 +424,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
           contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Aucune track pour le moment</Text>
+            <Text style={styles.emptyText}>No tracks yet</Text>
           }
         />
 
@@ -440,7 +438,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Inviter un ami</Text>
+                <Text style={styles.modalTitle}>Invite a friend</Text>
                 <TouchableOpacity onPress={() => setInviteVisible(false)}>
                   <Ionicons name="close" size={24} color="#666" />
                 </TouchableOpacity>
@@ -449,7 +447,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
               {loadingFriends ? (
                 <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} />
               ) : friends.length === 0 ? (
-                <Text style={styles.emptyText}>Aucun ami a inviter</Text>
+                <Text style={styles.emptyText}>No friends to invite</Text>
               ) : (
                 <FlatList
                   data={friends}
@@ -462,7 +460,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
                         <Text style={styles.friendEmail}>{friend.email}</Text>
                         <View style={styles.permRow}>
                           <Text style={styles.permLabel}>
-                            {inviteCanEdit[friend.id] ? 'Editeur' : 'Lecteur'}
+                            {inviteCanEdit[friend.id] ? 'Editor' : 'Viewer'}
                           </Text>
                           <Switch
                             value={inviteCanEdit[friend.id] ?? true}
@@ -481,7 +479,7 @@ export default function PlaylistScreen({ route, navigation }: Props) {
                         {invitingId === friend.id ? (
                           <ActivityIndicator color="#fff" size="small" />
                         ) : (
-                          <Text style={styles.inviteBtnText}>Inviter</Text>
+                          <Text style={styles.inviteBtnText}>Invite</Text>
                         )}
                       </TouchableOpacity>
                     </View>
@@ -696,7 +694,6 @@ const styles = StyleSheet.create({
     marginTop: 30,
     fontSize: 15,
   },
-  // Invite modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',

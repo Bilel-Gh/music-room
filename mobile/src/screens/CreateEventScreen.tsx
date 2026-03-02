@@ -48,14 +48,14 @@ export default function CreateEventScreen({ navigation }: Props) {
   };
 
   const formatDate = (d: Date) =>
-    d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+    d.toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' });
 
   const formatTime = (d: Date) =>
-    d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   const handleCreate = async () => {
     if (!name.trim() || name.trim().length < 2) {
-      crossAlert('Erreur', 'Le nom doit faire au moins 2 caracteres');
+      crossAlert('Error', 'Name must be at least 2 characters');
       return;
     }
 
@@ -75,7 +75,7 @@ export default function CreateEventScreen({ navigation }: Props) {
 
       if (licenseType === 'LOCATION_TIME') {
         if (!city.trim()) {
-          crossAlert('Erreur', 'Veuillez saisir une ville');
+          crossAlert('Error', 'Please enter a city');
           setCreating(false);
           return;
         }
@@ -109,7 +109,7 @@ export default function CreateEventScreen({ navigation }: Props) {
         setGeocoding(false);
 
         if (lat === null || lon === null) {
-          crossAlert('Erreur', `Impossible de trouver "${city.trim()}". Essayez avec un nom de ville plus precis.`);
+          crossAlert('Error', `Unable to find "${city.trim()}". Try a more specific city name.`);
           setCreating(false);
           return;
         }
@@ -124,8 +124,8 @@ export default function CreateEventScreen({ navigation }: Props) {
       navigation.replace('Event', { eventId: data.data.id });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible de creer l\'evenement';
-      crossAlert('Erreur', msg);
+        || 'Unable to create event';
+      crossAlert('Error', msg);
     } finally {
       setCreating(false);
       setGeocoding(false);
@@ -154,12 +154,12 @@ export default function CreateEventScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={[styles.scroll, formMaxWidth ? { maxWidth: formMaxWidth, width: '100%', alignSelf: 'center' as const } : undefined]} keyboardShouldPersistTaps="handled">
-      <Text style={styles.label}>Nom *</Text>
+      <Text style={styles.label}>Name *</Text>
       <TextInput
         style={styles.input}
         value={name}
         onChangeText={setName}
-        placeholder="Nom de l'evenement"
+        placeholder="Event name"
         placeholderTextColor="#999"
       />
 
@@ -168,12 +168,12 @@ export default function CreateEventScreen({ navigation }: Props) {
         style={[styles.input, styles.multiline]}
         value={description}
         onChangeText={setDescription}
-        placeholder="Description (optionnel)"
+        placeholder="Description (optional)"
         placeholderTextColor="#999"
         multiline
       />
 
-      <Text style={styles.label}>Type de licence</Text>
+      <Text style={styles.label}>License type</Text>
       <View style={styles.licenseRow}>
         {(['OPEN', 'INVITE_ONLY', 'LOCATION_TIME'] as LicenseType[]).map((type) => (
           <TouchableOpacity
@@ -182,19 +182,19 @@ export default function CreateEventScreen({ navigation }: Props) {
             onPress={() => handleLicenseChange(type)}
           >
             <Text style={[styles.licenseBtnText, licenseType === type && { color: colors.primary, fontWeight: '600' as const }]}>
-              {type === 'OPEN' ? 'Ouvert' : type === 'INVITE_ONLY' ? 'Sur invitation' : 'Lieu + Horaire'}
+              {type === 'OPEN' ? 'Open' : type === 'INVITE_ONLY' ? 'Invite Only' : 'Location + Time'}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
       <Text style={styles.licenseHint}>
-        {licenseType === 'OPEN' && 'Tout le monde peut participer et voter'}
-        {licenseType === 'INVITE_ONLY' && 'Seuls les invites peuvent voter et ajouter des tracks'}
-        {licenseType === 'LOCATION_TIME' && 'Les votes sont limites a une zone geographique et un creneau horaire'}
+        {licenseType === 'OPEN' && 'Anyone can participate and vote'}
+        {licenseType === 'INVITE_ONLY' && 'Only invited users can vote and add tracks'}
+        {licenseType === 'LOCATION_TIME' && 'Votes are limited to a geographic zone and time slot'}
       </Text>
 
       <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Visible publiquement</Text>
+        <Text style={styles.switchLabel}>Publicly visible</Text>
         <Switch
           value={isPublic}
           onValueChange={setIsPublic}
@@ -203,13 +203,13 @@ export default function CreateEventScreen({ navigation }: Props) {
       </View>
       <Text style={styles.visibilityHint}>
         {isPublic
-          ? 'Visible par tous dans la liste d\'accueil'
-          : 'Cache — seuls les invites peuvent y acceder'}
+          ? 'Visible to everyone on the home feed'
+          : 'Hidden — only invited users can access'}
       </Text>
 
       {licenseType === 'LOCATION_TIME' && (
         <View style={styles.locationSection}>
-          <Text style={styles.sectionTitle}>Lieu</Text>
+          <Text style={styles.sectionTitle}>Location</Text>
           <TextInput
             style={styles.input}
             value={city}
@@ -220,17 +220,17 @@ export default function CreateEventScreen({ navigation }: Props) {
           {geocoding && (
             <View style={styles.geocodingRow}>
               <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.geocodingText}>Recherche de la ville...</Text>
+              <Text style={styles.geocodingText}>Searching for city...</Text>
             </View>
           )}
           <Text style={styles.hintText}>
-            Les votants devront se trouver dans un rayon de 5 km autour de cette ville
+            Voters must be within a 5 km radius of this city
           </Text>
 
-          <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Creneau horaire</Text>
+          <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Time slot</Text>
 
           {/* Start date */}
-          <Text style={styles.smallLabel}>Debut</Text>
+          <Text style={styles.smallLabel}>Start</Text>
           <View style={styles.pickerRow}>
             <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowStartDate(true)}>
               <Text style={styles.pickerBtnText}>{formatDate(startDate)}</Text>
@@ -259,7 +259,7 @@ export default function CreateEventScreen({ navigation }: Props) {
           )}
 
           {/* End date */}
-          <Text style={styles.smallLabel}>Fin</Text>
+          <Text style={styles.smallLabel}>End</Text>
           <View style={styles.pickerRow}>
             <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowEndDate(true)}>
               <Text style={styles.pickerBtnText}>{formatDate(endDate)}</Text>
@@ -297,7 +297,7 @@ export default function CreateEventScreen({ navigation }: Props) {
         {creating ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.createBtnText}>Creer l'evenement</Text>
+          <Text style={styles.createBtnText}>Create event</Text>
         )}
       </TouchableOpacity>
     </ScrollView>

@@ -51,10 +51,10 @@ const Tab = createBottomTabNavigator<TabParamList>();
 type SidebarTab = { key: keyof TabParamList; label: string; icon: keyof typeof Ionicons.glyphMap };
 
 const SIDEBAR_TABS: SidebarTab[] = [
-  { key: 'Home', label: 'Accueil', icon: 'home-outline' },
-  { key: 'Friends', label: 'Amis', icon: 'people-outline' },
+  { key: 'Home', label: 'Home', icon: 'home-outline' },
+  { key: 'Friends', label: 'Friends', icon: 'people-outline' },
   { key: 'Notifications', label: 'Notifications', icon: 'notifications-outline' },
-  { key: 'Profile', label: 'Profil', icon: 'person-outline' },
+  { key: 'Profile', label: 'Profile', icon: 'person-outline' },
 ];
 
 const TAB_SCREENS: Record<keyof TabParamList, () => JSX.Element> = {
@@ -152,7 +152,7 @@ function MainTabs() {
         component={HomeScreen}
         options={{
           title: 'Music Room',
-          tabBarLabel: 'Accueil',
+          tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -162,8 +162,8 @@ function MainTabs() {
         name="Friends"
         component={FriendsScreen}
         options={{
-          title: 'Amis',
-          tabBarLabel: 'Amis',
+          title: 'Friends',
+          tabBarLabel: 'Friends',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
           ),
@@ -189,8 +189,8 @@ function MainTabs() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          title: 'Mon profil',
-          tabBarLabel: 'Profil',
+          title: 'My Profile',
+          tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
@@ -225,11 +225,11 @@ export default function AppNavigator() {
               component={MainTabs}
               options={{ headerShown: false }}
             />
-            <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ title: 'Nouvel evenement' }} />
-            <Stack.Screen name="CreatePlaylist" component={CreatePlaylistScreen} options={{ title: 'Nouvelle playlist' }} />
-            <Stack.Screen name="Event" component={EventScreen} options={{ title: 'Evenement' }} />
+            <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ title: 'New Event' }} />
+            <Stack.Screen name="CreatePlaylist" component={CreatePlaylistScreen} options={{ title: 'New Playlist' }} />
+            <Stack.Screen name="Event" component={EventScreen} options={{ title: 'Event' }} />
             <Stack.Screen name="Playlist" component={PlaylistScreen} />
-            <Stack.Screen name="UserProfile" component={UserProfileScreen} options={{ title: 'Profil' }} />
+            <Stack.Screen name="UserProfile" component={UserProfileScreen} options={{ title: 'Profile' }} />
             <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} options={{ title: 'Verification' }} />
           </>
         ) : (
@@ -247,12 +247,12 @@ export default function AppNavigator() {
             <Stack.Screen
               name="ForgotPassword"
               component={ForgotPasswordScreen}
-              options={{ title: 'Mot de passe oublie' }}
+              options={{ title: 'Forgot Password' }}
             />
             <Stack.Screen
               name="ResetPassword"
               component={ResetPasswordScreen}
-              options={{ title: 'Reinitialiser' }}
+              options={{ title: 'Reset Password' }}
             />
           </>
         )}

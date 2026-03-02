@@ -198,13 +198,11 @@ export default function ProfileScreen() {
     ? { maxWidth: contentMaxWidth, width: '100%' as const, alignSelf: 'center' as const }
     : undefined;
 
-  // View mode
   if (!isEditing) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <OfflineBanner />
         <ScrollView contentContainerStyle={[styles.scroll, responsiveScroll]}>
-          {/* Avatar */}
           <View style={styles.avatarContainer}>
             <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
               <Text style={styles.avatarText}>{getInitials(profile.name)}</Text>
@@ -225,7 +223,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Info cards */}
           {profile.publicInfo ? (
             <View style={styles.card}>
               <Text style={styles.cardLabel}>Public info</Text>
@@ -339,7 +336,6 @@ export default function ProfileScreen() {
     );
   }
 
-  // Edit mode
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <OfflineBanner />
@@ -427,7 +423,6 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
-  // Avatar section
   avatarContainer: {
     alignItems: 'center',
     marginBottom: 24,
@@ -457,7 +452,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  // Info cards
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -565,7 +559,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  // Edit mode
   label: {
     fontSize: 14,
     fontWeight: '600',

@@ -64,7 +64,6 @@ export default function EventScreen({ route, navigation }: Props) {
   const [adding, setAdding] = useState(false);
   const [votingId, setVotingId] = useState<string | null>(null);
 
-  // Invite modal
   const [inviteVisible, setInviteVisible] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(false);
@@ -87,17 +86,17 @@ export default function EventScreen({ route, navigation }: Props) {
   }, [eventId]);
 
   const handleDelete = useCallback(() => {
-    crossAlert('Supprimer', 'Supprimer cet evenement ?', [
-      { text: 'Annuler', style: 'cancel' },
+    crossAlert('Delete', 'Delete this event?', [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
             await api.delete(`/events/${eventId}`);
             navigation.goBack();
           } catch {
-            crossAlert('Erreur', 'Impossible de supprimer');
+            crossAlert('Error', 'Unable to delete');
           }
         },
       },
@@ -111,7 +110,7 @@ export default function EventScreen({ route, navigation }: Props) {
       const { data } = await api.get('/users/me/friends');
       setFriends(data.data);
     } catch {
-      crossAlert('Erreur', 'Impossible de charger la liste d\'amis');
+      crossAlert('Error', 'Unable to load friends list');
     } finally {
       setLoadingFriends(false);
     }
@@ -151,7 +150,7 @@ export default function EventScreen({ route, navigation }: Props) {
         api.post(`/events/${eventId}/join`).catch(() => {});
       }
     } catch {
-      crossAlert('Erreur', 'Impossible de charger l\'evenement');
+      crossAlert('Error', 'Unable to load event');
     } finally {
       setLoading(false);
     }
@@ -174,12 +173,12 @@ export default function EventScreen({ route, navigation }: Props) {
     setInvitingId(friendId);
     try {
       await api.post(`/events/${eventId}/invite`, { userId: friendId });
-      crossAlert('Succes', 'Invitation envoyee');
+      crossAlert('Success', 'Invitation sent');
       setFriends(prev => prev.filter(f => f.id !== friendId));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'inviter';
-      crossAlert('Erreur', msg);
+        || 'Unable to invite';
+      crossAlert('Error', msg);
     } finally {
       setInvitingId(null);
     }
@@ -187,11 +186,11 @@ export default function EventScreen({ route, navigation }: Props) {
 
   const handleAddTrack = async () => {
     if (!useNetworkStore.getState().isConnected) {
-      crossAlert('Mode Hors-Ligne', 'Cette action necessite une connexion internet.');
+      crossAlert('Offline Mode', 'This action requires an internet connection.');
       return;
     }
     if (!title.trim() || !artist.trim()) {
-      crossAlert('Erreur', 'Titre et artiste requis');
+      crossAlert('Error', 'Title and artist required');
       return;
     }
 
@@ -207,7 +206,7 @@ export default function EventScreen({ route, navigation }: Props) {
       if (event?.licenseType === 'LOCATION_TIME') {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          crossAlert('Erreur', 'La localisation est requise pour ajouter des tracks dans cet evenement');
+          crossAlert('Error', 'Location is required to add tracks to this event');
           setAdding(false);
           return;
         }
@@ -221,8 +220,8 @@ export default function EventScreen({ route, navigation }: Props) {
       setArtist('');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible d\'ajouter la track';
-      crossAlert('Erreur', msg);
+        || 'Unable to add track';
+      crossAlert('Error', msg);
     } finally {
       setAdding(false);
     }
@@ -230,7 +229,7 @@ export default function EventScreen({ route, navigation }: Props) {
 
   const handleVote = async (trackId: string) => {
     if (!useNetworkStore.getState().isConnected) {
-      crossAlert('Mode Hors-Ligne', 'Cette action necessite une connexion internet.');
+      crossAlert('Offline Mode', 'This action requires an internet connection.');
       return;
     }
 
@@ -241,7 +240,7 @@ export default function EventScreen({ route, navigation }: Props) {
       if (event?.licenseType === 'LOCATION_TIME') {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          crossAlert('Erreur', 'La localisation est requise pour voter dans cet evenement');
+          crossAlert('Error', 'Location is required to vote in this event');
           setVotingId(null);
           return;
         }
@@ -253,8 +252,8 @@ export default function EventScreen({ route, navigation }: Props) {
       await api.post(`/events/${eventId}/tracks/${trackId}/vote`, body);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        || 'Impossible de voter';
-      crossAlert('Erreur', msg);
+        || 'Unable to vote';
+      crossAlert('Error', msg);
     } finally {
       setVotingId(null);
     }
@@ -312,20 +311,19 @@ export default function EventScreen({ route, navigation }: Props) {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
         <OfflineBanner />
-        {/* License badge + description */}
         <View style={[styles.headerInfo, responsiveContent]}>
           <View style={[styles.licenseBadge,
             event?.licenseType === 'OPEN' ? styles.badgeOpen :
             event?.licenseType === 'INVITE_ONLY' ? styles.badgeInvite : styles.badgeLocation
           ]}>
             <Text style={styles.licenseBadgeText}>
-              {event?.licenseType === 'OPEN' ? 'Ouvert' :
-               event?.licenseType === 'INVITE_ONLY' ? 'Sur invitation' : 'Lieu + Horaire'}
+              {event?.licenseType === 'OPEN' ? 'Open' :
+               event?.licenseType === 'INVITE_ONLY' ? 'Invite Only' : 'Location + Time'}
             </Text>
           </View>
           {!event?.isPublic && (
             <View style={styles.privateBadge}>
-              <Text style={styles.privateBadgeText}>Prive</Text>
+              <Text style={styles.privateBadgeText}>Private</Text>
             </View>
           )}
         </View>
@@ -339,7 +337,7 @@ export default function EventScreen({ route, navigation }: Props) {
           <View style={styles.restrictedBanner}>
             <Ionicons name="lock-closed-outline" size={16} color="#92400e" />
             <Text style={styles.restrictedText}>
-              Evenement sur invitation — vous pouvez voir les tracks mais pas voter ni en ajouter
+              Invite-only event — you can view tracks but cannot vote or add new ones
             </Text>
           </View>
         )}
@@ -347,11 +345,11 @@ export default function EventScreen({ route, navigation }: Props) {
         {/* Add track form - only for participants */}
         {canParticipate && (
           <View style={styles.addForm}>
-            <Text style={styles.formTitle}>Ajouter une track</Text>
+            <Text style={styles.formTitle}>Add a track</Text>
             <View style={styles.formRow}>
               <TextInput
                 style={[styles.formInput, { flex: 1, marginRight: 8 }]}
-                placeholder="Titre"
+                placeholder="Title"
                 placeholderTextColor="#999"
                 value={title}
                 onChangeText={setTitle}
@@ -361,7 +359,7 @@ export default function EventScreen({ route, navigation }: Props) {
               />
               <TextInput
                 style={[styles.formInput, { flex: 1 }]}
-                placeholder="Artiste"
+                placeholder="Artist"
                 placeholderTextColor="#999"
                 value={artist}
                 onChangeText={setArtist}
@@ -378,7 +376,7 @@ export default function EventScreen({ route, navigation }: Props) {
               {adding ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.addButtonText}>Ajouter</Text>
+                <Text style={styles.addButtonText}>Add</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -395,11 +393,10 @@ export default function EventScreen({ route, navigation }: Props) {
           contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Aucune track pour le moment</Text>
+            <Text style={styles.emptyText}>No tracks yet</Text>
           }
         />
 
-        {/* Invite modal */}
         <Modal
           visible={inviteVisible}
           transparent
@@ -409,7 +406,7 @@ export default function EventScreen({ route, navigation }: Props) {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Inviter un ami</Text>
+                <Text style={styles.modalTitle}>Invite a friend</Text>
                 <TouchableOpacity onPress={() => setInviteVisible(false)}>
                   <Ionicons name="close" size={24} color="#666" />
                 </TouchableOpacity>
@@ -418,7 +415,7 @@ export default function EventScreen({ route, navigation }: Props) {
               {loadingFriends ? (
                 <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} />
               ) : friends.length === 0 ? (
-                <Text style={styles.emptyText}>Aucun ami a inviter</Text>
+                <Text style={styles.emptyText}>No friends to invite</Text>
               ) : (
                 <FlatList
                   data={friends}
@@ -438,7 +435,7 @@ export default function EventScreen({ route, navigation }: Props) {
                         {invitingId === friend.id ? (
                           <ActivityIndicator color="#fff" size="small" />
                         ) : (
-                          <Text style={styles.inviteBtnText}>Inviter</Text>
+                          <Text style={styles.inviteBtnText}>Invite</Text>
                         )}
                       </TouchableOpacity>
                     </View>
@@ -639,7 +636,6 @@ const styles = StyleSheet.create({
     marginTop: 30,
     fontSize: 15,
   },
-  // Invite modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',

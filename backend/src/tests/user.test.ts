@@ -16,7 +16,7 @@ beforeAll(async () => {
   await prisma.friendship.deleteMany({});
   await prisma.user.deleteMany({ where: { email: { in: [userA.email, userB.email] } } });
 
-  // Créer les deux utilisateurs et récupérer leurs tokens
+  // Create both users and retrieve their tokens
   const resA = await request(app).post('/api/auth/register').send(userA);
   tokenA = resA.body.data.accessToken;
   userAId = resA.body.data.user.id;
@@ -68,7 +68,7 @@ describe('PUT /api/users/me', () => {
     expect(res.body.data.musicPreferences).toEqual(['jazz', 'rock']);
   });
 
-  // Remplir aussi B pour les tests de visibilité
+  // Also fill in B for visibility tests
   it('should update user B profile', async () => {
     const res = await request(app)
       .put('/api/users/me')
@@ -158,7 +158,7 @@ describe('Friend system', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.publicInfo).toBe('Fan de jazz');
     expect(res.body.data.friendsInfo).toBe('Dispo le samedi');
-    // privateInfo ne doit JAMAIS être visible par un autre utilisateur
+    // privateInfo must NEVER be visible to another user
     expect(res.body.data.privateInfo).toBeUndefined();
   });
 

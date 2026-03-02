@@ -107,7 +107,7 @@ export async function addTrack(req: Request, res: Response, next: NextFunction) 
     const eventId = req.params.id as string;
     const track = await eventService.addTrack(eventId, req.body, req.user!.userId);
 
-    // Émettre la liste mise à jour via Socket.io
+    // Broadcast updated track list via Socket.io
     const io = getIO();
     if (io) {
       const tracks = await eventService.getEventTracks(eventId);
