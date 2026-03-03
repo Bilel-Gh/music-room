@@ -1,19 +1,19 @@
-# Architecture Overview — Music Room
+# Vue d'ensemble de l'architecture — Music Room
 
-## What is Music Room?
+## Qu'est-ce que Music Room ?
 
-Music Room is a collaborative music application where users can create events to vote on tracks together, or build shared playlists with friends. Everything happens in real time: when someone votes or adds a track, all other participants see the change instantly.
+Music Room est une application musicale collaborative où les utilisateurs peuvent créer des événements pour voter sur des morceaux ensemble, ou construire des playlists partagées avec des amis. Tout se passe en temps réel : quand quelqu'un vote ou ajoute un morceau, tous les autres participants voient le changement instantanément.
 
-The app is composed of three main parts that communicate with each other:
+L'application est composée de trois parties principales qui communiquent entre elles :
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        MOBILE APP                               │
+│                        APPLICATION MOBILE                        │
 │              React Native (Expo) + TypeScript                   │
 │                                                                 │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
-│  │  Screens  │  │  Zustand  │  │   API    │  │  Socket.io   │   │
-│  │  (UI)     │  │  (State)  │  │  Client  │  │  Client      │   │
+│  │  Écrans   │  │  Zustand  │  │  Client  │  │  Client      │   │
+│  │  (UI)     │  │  (État)   │  │  API     │  │  Socket.io   │   │
 │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──────┬───────┘   │
 │       │              │             │                │            │
 └───────┼──────────────┼─────────────┼────────────────┼────────────┘
@@ -23,16 +23,16 @@ The app is composed of three main parts that communicate with each other:
 ┌───────┼──────────────┼─────────────┼────────────────┼────────────┐
 │       │              │             │                │            │
 │  ┌────▼─────────────────────────────────────────────▼───────┐   │
-│  │                    EXPRESS SERVER                          │   │
+│  │                    SERVEUR EXPRESS                          │   │
 │  │                                                           │   │
 │  │  ┌─────────┐  ┌────────────┐  ┌───────────┐             │   │
-│  │  │ Routes  │─▶│ Controllers│─▶│ Services  │             │   │
+│  │  │ Routes  │─▶│ Contrôleurs│─▶│ Services  │             │   │
 │  │  └─────────┘  └────────────┘  └─────┬─────┘             │   │
 │  │                                      │                    │   │
 │  │  ┌──────────────────┐  ┌─────────────▼──────────────┐    │   │
-│  │  │   Middleware      │  │        Socket.io           │    │   │
-│  │  │ (auth, validate, │  │  (rooms, broadcasts,       │    │   │
-│  │  │  rate-limit, log) │  │   real-time events)        │    │   │
+│  │  │   Middlewares     │  │        Socket.io           │    │   │
+│  │  │ (auth, validation,│  │  (rooms, broadcasts,       │    │   │
+│  │  │  rate-limit, log) │  │   événements temps réel)   │    │   │
 │  │  └──────────────────┘  └────────────────────────────┘    │   │
 │  └──────────────────────────────┬────────────────────────────┘   │
 │                                 │                                │
@@ -43,117 +43,118 @@ The app is composed of three main parts that communicate with each other:
                                   │
                     ┌─────────────▼─────────────┐
                     │                           │
-                    │    PostgreSQL Database     │
-                    │    (hosted on Supabase)    │
+                    │    Base de données         │
+                    │    PostgreSQL              │
+                    │    (hébergée sur Supabase) │
                     │                           │
                     └───────────────────────────┘
 ```
 
-## How the parts work together
+## Comment les parties fonctionnent ensemble
 
-### 1. Mobile App → Backend (REST API)
+### 1. Application mobile → Backend (API REST)
 
-The mobile app uses **Axios** to make HTTP requests to the backend. Every request includes:
-- A JWT token in the `Authorization` header (for authentication)
-- Device metadata (`X-Platform`, `X-Device`, `X-App-Version`) for logging
+L'application mobile utilise **Axios** pour envoyer des requêtes HTTP au backend. Chaque requête inclut :
+- Un token JWT dans le header `Authorization` (pour l'authentification)
+- Des métadonnées de l'appareil (`X-Platform`, `X-Device`, `X-App-Version`) pour le logging
 
-The API follows REST conventions: `GET` to read, `POST` to create, `PUT` to update, `DELETE` to remove. All responses follow the same shape: `{ success: true, data: ... }` or `{ success: false, error: "..." }`.
+L'API suit les conventions REST : `GET` pour lire, `POST` pour créer, `PUT` pour modifier, `DELETE` pour supprimer. Toutes les réponses suivent la même structure : `{ success: true, data: ... }` ou `{ success: false, error: "..." }`.
 
-**Key file**: `mobile/src/services/api.ts` — Axios instance with interceptors for JWT and device metadata.
+**Fichier clé** : `mobile/src/services/api.ts` — Instance Axios avec intercepteurs pour le JWT et les métadonnées de l'appareil.
 
-### 2. Mobile App ↔ Backend (WebSocket)
+### 2. Application mobile ↔ Backend (WebSocket)
 
-For real-time features, the mobile app opens a persistent WebSocket connection using **Socket.io**. This connection stays open as long as the app is active. When something happens (a vote, a track added, a friend request), the backend pushes updates through this channel without the app needing to ask.
+Pour les fonctionnalités temps réel, l'application mobile ouvre une connexion WebSocket permanente via **Socket.io**. Cette connexion reste ouverte tant que l'application est active. Quand quelque chose se produit (un vote, un morceau ajouté, une demande d'ami), le backend pousse les mises à jour par ce canal sans que l'application ait besoin de demander.
 
-Socket.io uses **rooms** to send updates only to people who need them:
-- `event:{eventId}` — people looking at a specific event
-- `playlist:{playlistId}` — people editing a specific playlist
-- `user:{userId}` — personal notifications (friend requests, invitations)
+Socket.io utilise des **rooms** pour envoyer les mises à jour uniquement aux personnes concernées :
+- `event:{eventId}` — les personnes qui consultent un événement spécifique
+- `playlist:{playlistId}` — les personnes qui éditent une playlist spécifique
+- `user:{userId}` — les notifications personnelles (demandes d'amis, invitations)
 
-**Key files**: `backend/src/config/socket.ts` (server setup), `mobile/src/services/socket.ts` (client).
+**Fichiers clés** : `backend/src/config/socket.ts` (serveur), `mobile/src/services/socket.ts` (client).
 
-### 3. Backend → Database (Prisma)
+### 3. Backend → Base de données (Prisma)
 
-The backend never talks to PostgreSQL directly. It goes through **Prisma**, an ORM that provides type-safe queries in TypeScript. Prisma generates types from the database schema, so if a table has a `name` column of type `String`, TypeScript knows about it at compile time.
+Le backend ne communique jamais directement avec PostgreSQL. Il passe par **Prisma**, un ORM qui fournit des requêtes typées en TypeScript. Prisma génère des types à partir du schéma de la base de données, donc si une table a une colonne `name` de type `String`, TypeScript le sait à la compilation.
 
-The database is hosted on **Supabase**, but we only use Supabase as a PostgreSQL host. No Supabase SDK, no Supabase Auth — just a raw database connection string.
+La base de données est hébergée sur **Supabase**, mais on utilise Supabase uniquement comme hébergeur PostgreSQL. Pas de SDK Supabase, pas de Supabase Auth — juste une chaîne de connexion brute à la base de données.
 
-**Key files**: `backend/prisma/schema.prisma` (schema definition), `backend/src/lib/prisma.ts` (client singleton).
+**Fichiers clés** : `backend/prisma/schema.prisma` (définition du schéma), `backend/src/lib/prisma.ts` (singleton du client).
 
-## Request lifecycle
+## Cycle de vie d'une requête
 
-Here's what happens when a user votes on a track in an event:
+Voici ce qui se passe quand un utilisateur vote sur un morceau dans un événement :
 
 ```
-1. User taps "Vote" on mobile
+1. L'utilisateur appuie sur "Voter" sur le mobile
         │
-2. Axios sends POST /api/events/:id/tracks/:trackId/vote
-   with JWT token + location data
+2. Axios envoie POST /api/events/:id/tracks/:trackId/vote
+   avec le token JWT + les données de localisation
         │
-3. Express receives the request
-   → helmet adds security headers
-   → cors checks origin
-   → globalLimiter checks rate limit
-   → auth middleware verifies JWT
-   → validate middleware checks Zod schema
-   → requestLogger logs the action
+3. Express reçoit la requête
+   → helmet ajoute les headers de sécurité
+   → cors vérifie l'origine
+   → globalLimiter vérifie le rate limit
+   → le middleware auth vérifie le JWT
+   → le middleware validate vérifie le schéma Zod
+   → requestLogger enregistre l'action
         │
-4. event.controller.ts handles the request
-   → calls voteService.voteForTrack()
+4. event.controller.ts traite la requête
+   → appelle voteService.voteForTrack()
         │
-5. vote.service.ts runs a Prisma TRANSACTION:
-   → check if user already voted (toggle)
-   → create/delete vote + update voteCount
-   → all in one atomic operation
+5. vote.service.ts exécute une TRANSACTION Prisma :
+   → vérifie si l'utilisateur a déjà voté (toggle)
+   → crée/supprime le vote + met à jour le voteCount
+   → le tout en une seule opération atomique
         │
-6. Controller gets updated track data
-   → responds with JSON to the mobile
-   → ALSO: fetches updated track list
-   → emits 'trackVoted' via Socket.io
-     to room event:{eventId}
+6. Le contrôleur récupère les données mises à jour
+   → répond en JSON au mobile
+   → AUSSI : récupère la liste des morceaux mise à jour
+   → émet 'trackVoted' via Socket.io
+     vers la room event:{eventId}
         │
-7. All other users in the event screen
-   receive the updated track list
-   via their WebSocket connection
-   → their UI updates automatically
+7. Tous les autres utilisateurs dans l'écran de l'événement
+   reçoivent la liste des morceaux mise à jour
+   via leur connexion WebSocket
+   → leur interface se met à jour automatiquement
 ```
 
-## Project structure (simplified)
+## Structure du projet (simplifiée)
 
 ```
 music-room/
 ├── backend/
 │   └── src/
 │       ├── config/         ← Socket.io, Passport, rate-limit, logger, Swagger
-│       ├── middleware/      ← auth, error, validate, logger, premium
-│       ├── routes/          ← auth, user, event, playlist (+ Swagger docs)
-│       ├── controllers/     ← request handlers (call services, emit socket events)
-│       ├── services/        ← business logic (Prisma queries, validations)
-│       ├── schemas/         ← Zod validation schemas
+│       ├── middleware/      ← auth, erreur, validation, logger, premium
+│       ├── routes/          ← auth, user, event, playlist (+ annotations Swagger)
+│       ├── controllers/     ← gestionnaires de requêtes (appellent les services, émettent les événements socket)
+│       ├── services/        ← logique métier (requêtes Prisma, validations)
+│       ├── schemas/         ← schémas de validation Zod
 │       └── tests/           ← vitest + supertest
 ├── mobile/
 │   └── src/
-│       ├── screens/         ← all app screens (Login, Home, Event, Playlist...)
-│       ├── navigation/      ← React Navigation setup (tabs + stacks)
-│       ├── services/        ← API client (Axios) + Socket.io client
-│       ├── store/           ← Zustand stores (auth, network state)
-│       └── components/      ← shared components (OfflineBanner)
+│       ├── screens/         ← tous les écrans de l'app (Login, Home, Event, Playlist...)
+│       ├── navigation/      ← configuration React Navigation (tabs + stacks)
+│       ├── services/        ← client API (Axios) + client Socket.io
+│       ├── store/           ← stores Zustand (auth, état réseau)
+│       └── components/      ← composants partagés (OfflineBanner)
 ├── prisma/
-│   └── schema.prisma        ← database schema (single source of truth)
-└── Makefile                  ← dev, build, test, migrate commands
+│   └── schema.prisma        ← schéma de la base (source de vérité unique)
+└── Makefile                  ← commandes dev, build, test, migrate
 ```
 
-## The two main services
+## Les deux services principaux
 
-### Service 1: Music Track Vote (Events)
+### Service 1 : Vote de morceaux (Événements)
 
-Users create "events" where participants can add tracks and vote for their favorites. Tracks are sorted by vote count in real time. Events have three license types:
-- **OPEN**: anyone can join and vote
-- **INVITE_ONLY**: only invited members can participate
-- **LOCATION_TIME**: must be within 5km of the event location AND during the event time window
+Les utilisateurs créent des "événements" où les participants peuvent ajouter des morceaux et voter pour leurs favoris. Les morceaux sont triés par nombre de votes en temps réel. Les événements ont trois types de licence :
+- **OPEN** : n'importe qui peut rejoindre et voter
+- **INVITE_ONLY** : seuls les membres invités peuvent participer
+- **LOCATION_TIME** : il faut être dans un rayon de 5 km de l'événement ET pendant la fenêtre temporelle
 
-### Service 2: Music Playlist Editor (Playlists)
+### Service 2 : Éditeur de playlists (Playlists)
 
-Users create collaborative playlists where members can add, remove, and reorder tracks. Each member can have edit permissions or read-only access. Like events, playlists can be OPEN (anyone edits) or INVITE_ONLY (only members with `canEdit = true`).
+Les utilisateurs créent des playlists collaboratives où les membres peuvent ajouter, supprimer et réordonner des morceaux. Chaque membre peut avoir des droits d'édition ou un accès en lecture seule. Comme les événements, les playlists peuvent être OPEN (tout le monde édite) ou INVITE_ONLY (seuls les membres avec `canEdit = true`).
 
-Both services use **Prisma transactions** for operations that could conflict (concurrent votes, concurrent reordering) and **Socket.io** to push updates in real time.
+Les deux services utilisent des **transactions Prisma** pour les opérations qui pourraient entrer en conflit (votes simultanés, réordonnancement concurrent) et **Socket.io** pour pousser les mises à jour en temps réel.

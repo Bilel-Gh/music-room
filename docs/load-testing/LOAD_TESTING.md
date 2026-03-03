@@ -1,84 +1,84 @@
-# Load Testing — Music Room
+# Tests de charge — Music Room
 
-## What is load testing?
+## Qu'est-ce que les tests de charge ?
 
-Load testing simulates multiple users hitting the API simultaneously to find out how the backend performs under pressure. The goal is to answer: "How many simultaneous users can the backend handle before it starts failing or slowing down?"
+Les tests de charge simulent plusieurs utilisateurs qui frappent l'API simultanément pour découvrir comment le backend se comporte sous pression. L'objectif est de répondre à : "Combien d'utilisateurs simultanés le backend peut-il gérer avant de commencer à échouer ou ralentir ?"
 
-## Tool used: Artillery
+## Outil utilisé : Artillery
 
-**Artillery** is a load testing tool that simulates virtual users sending HTTP requests to the API. It's configured via a YAML file that defines phases (warm-up, ramp-up, sustained load) and scenarios (what each virtual user does).
+**Artillery** est un outil de test de charge qui simule des utilisateurs virtuels envoyant des requêtes HTTP à l'API. Il est configuré via un fichier YAML qui définit des phases (préchauffage, montée en charge, charge soutenue) et des scénarios (ce que chaque utilisateur virtuel fait).
 
-**Why Artillery**: It's simple to configure, supports phases for gradual load increase, integrates with Node.js, and produces clear metrics. Alternatives like k6 or JMeter exist, but Artillery is the simplest for our use case.
+**Pourquoi Artillery** : Il est simple à configurer, supporte les phases pour une augmentation graduelle de la charge, s'intègre avec Node.js, et produit des métriques claires. Des alternatives comme k6 ou JMeter existent, mais Artillery est le plus simple pour notre cas d'usage.
 
-**File**: `backend/artillery.yml`
+**Fichier** : `backend/artillery.yml`
 
-## Test configuration
+## Configuration des tests
 
 ```yaml
 config:
   target: "http://localhost:3001"
   phases:
-    - duration: 10        # Phase 1: Warm-up
-      arrivalRate: 2      # 2 new users per second
-      name: "Warm-up"
+    - duration: 10        # Phase 1 : Préchauffage
+      arrivalRate: 2      # 2 nouveaux utilisateurs par seconde
+      name: "Préchauffage"
 
-    - duration: 30        # Phase 2: Ramp-up
-      arrivalRate: 2      # Start at 2 users/sec
-      rampTo: 20          # Gradually increase to 20 users/sec
-      name: "Ramp-up"
+    - duration: 30        # Phase 2 : Montée en charge
+      arrivalRate: 2      # Commence à 2 utilisateurs/sec
+      rampTo: 20          # Augmente graduellement jusqu'à 20 utilisateurs/sec
+      name: "Montée en charge"
 
-    - duration: 20        # Phase 3: Sustained load
-      arrivalRate: 20     # 20 new users per second
-      name: "Sustained load"
+    - duration: 20        # Phase 3 : Charge soutenue
+      arrivalRate: 20     # 20 nouveaux utilisateurs par seconde
+      name: "Charge soutenue"
 ```
 
-### Phases explained
+### Explication des phases
 
-| Phase | Duration | Users/second | Purpose |
-|-------|----------|-------------|---------|
-| **Warm-up** | 10 sec | 2/sec | Let the server warm up (JIT, connection pools) |
-| **Ramp-up** | 30 sec | 2→20/sec | Gradually increase load to find the breaking point |
-| **Sustained load** | 20 sec | 20/sec | Hold peak load to see if the server stays stable |
+| Phase | Durée | Utilisateurs/sec | Objectif |
+|-------|-------|-----------------|----------|
+| **Préchauffage** | 10 sec | 2/sec | Laisser le serveur se réchauffer (JIT, pools de connexions) |
+| **Montée en charge** | 30 sec | 2→20/sec | Augmenter progressivement la charge pour trouver le point de rupture |
+| **Charge soutenue** | 20 sec | 20/sec | Maintenir la charge maximale pour voir si le serveur reste stable |
 
-**Total virtual users**: ~20 (warm-up) + ~330 (ramp-up) + ~400 (sustained) ≈ **750 virtual users** over 60 seconds.
+**Total d'utilisateurs virtuels** : ~20 (préchauffage) + ~330 (montée) + ~400 (soutenue) ≈ **750 utilisateurs virtuels** sur 60 secondes.
 
-### Scenarios
+### Scénarios
 
-Three scenarios with weighted distribution:
+Trois scénarios avec distribution pondérée :
 
-| Scenario | Weight | What it does |
-|----------|--------|-------------|
-| **Health check** | 4/10 (40%) | `GET /health` — simple baseline without authentication |
-| **Browse events** | 3/10 (30%) | `GET /api/events` twice with a 1-second pause (authenticated) |
-| **Browse playlists** | 3/10 (30%) | `GET /api/playlists` twice with a 1-second pause (authenticated) |
+| Scénario | Poids | Ce qu'il fait |
+|----------|-------|---------------|
+| **Vérification de santé** | 4/10 (40%) | `GET /health` — base simple sans authentification |
+| **Parcourir les événements** | 3/10 (30%) | `GET /api/events` deux fois avec une pause de 1 seconde (authentifié) |
+| **Parcourir les playlists** | 3/10 (30%) | `GET /api/playlists` deux fois avec une pause de 1 seconde (authentifié) |
 
-The authenticated scenarios use a JWT token passed via the `AUTH_TOKEN` environment variable.
+Les scénarios authentifiés utilisent un token JWT passé via la variable d'environnement `AUTH_TOKEN`.
 
-## How to run the tests
+## Comment exécuter les tests
 
 ```bash
-# 1. Start the backend
+# 1. Démarrer le backend
 make dev
 
-# 2. Get a JWT token (login and copy the accessToken)
+# 2. Obtenir un token JWT (se connecter et copier l'accessToken)
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@test.com","password":"password123"}'
 
-# 3. Run Artillery with the token
+# 3. Lancer Artillery avec le token
 AUTH_TOKEN="eyJhbG..." make load-test
 ```
 
-Or directly:
+Ou directement :
 ```bash
 cd backend && AUTH_TOKEN="eyJhbG..." npx artillery run artillery.yml
 ```
 
-## How to read the results
+## Comment lire les résultats
 
-Artillery outputs metrics in three sections:
+Artillery produit des métriques en trois sections :
 
-### 1. Summary metrics
+### 1. Métriques résumées
 
 ```
 All VUs finished. Total time: 60 seconds
@@ -90,14 +90,14 @@ Summary report:
   RPS sent:            24.93
 ```
 
-| Metric | Meaning |
-|--------|---------|
-| **Scenarios launched** | Total number of virtual users created |
-| **Scenarios completed** | How many finished without errors |
-| **Requests completed** | Total HTTP requests sent (some scenarios have 2 requests) |
-| **RPS sent** | Requests Per Second — the throughput |
+| Métrique | Signification |
+|----------|---------------|
+| **Scenarios launched** | Nombre total d'utilisateurs virtuels créés |
+| **Scenarios completed** | Combien ont terminé sans erreur |
+| **Requests completed** | Nombre total de requêtes HTTP envoyées (certains scénarios ont 2 requêtes) |
+| **RPS sent** | Requêtes Par Seconde — le débit |
 
-### 2. Response times
+### 2. Temps de réponse
 
 ```
   http.response_time:
@@ -108,15 +108,15 @@ Summary report:
     p99: 350
 ```
 
-| Metric | Meaning | Good value |
-|--------|---------|-----------|
-| **min** | Fastest response | < 50ms |
-| **max** | Slowest response | < 1000ms |
-| **median** | 50% of requests were faster than this | < 100ms |
-| **p95** | 95% of requests were faster than this | < 500ms |
-| **p99** | 99% of requests were faster than this | < 1000ms |
+| Métrique | Signification | Bonne valeur |
+|----------|---------------|-------------|
+| **min** | Réponse la plus rapide | < 50ms |
+| **max** | Réponse la plus lente | < 1000ms |
+| **median** | 50% des requêtes étaient plus rapides | < 100ms |
+| **p95** | 95% des requêtes étaient plus rapides | < 500ms |
+| **p99** | 99% des requêtes étaient plus rapides | < 1000ms |
 
-### 3. Status codes
+### 3. Codes de statut
 
 ```
   http.codes.200: 1400
@@ -124,72 +124,72 @@ Summary report:
   http.codes.429: 46
 ```
 
-| Code | Meaning |
-|------|---------|
-| **200** | Successful responses |
-| **401** | Token expired or invalid (expected if token expires during test) |
-| **429** | Rate limited (expected — proves rate limiting works!) |
+| Code | Signification |
+|------|---------------|
+| **200** | Réponses réussies |
+| **401** | Token expiré ou invalide (attendu si le token expire pendant le test) |
+| **429** | Limité en débit (attendu — prouve que le rate limiting fonctionne !) |
 
-## Infrastructure context
+## Contexte de l'infrastructure
 
-### Server specifications
+### Spécifications du serveur
 
-The tests run against a **local development machine** (not a production server):
+Les tests s'exécutent sur une **machine de développement locale** (pas un serveur de production) :
 
-| Component | Specification |
-|-----------|--------------|
-| **CPU** | Development machine (varies) |
-| **RAM** | Development machine (varies) |
-| **Node.js** | Single-threaded event loop |
-| **Database** | Supabase free tier PostgreSQL |
-| **Network** | Localhost (no network latency) |
+| Composant | Spécification |
+|-----------|---------------|
+| **CPU** | Machine de développement (variable) |
+| **RAM** | Machine de développement (variable) |
+| **Node.js** | Boucle événementielle mono-thread |
+| **Base de données** | PostgreSQL Supabase offre gratuite |
+| **Réseau** | Localhost (pas de latence réseau) |
 
-### Supabase free tier limitations
+### Limitations de l'offre gratuite Supabase
 
-| Resource | Limit |
-|----------|-------|
-| **Database size** | 500 MB |
-| **Connections** | ~60 concurrent |
-| **Bandwidth** | 5 GB/month |
-| **Region** | Single region |
+| Ressource | Limite |
+|-----------|--------|
+| **Taille de la base** | 500 Mo |
+| **Connexions** | ~60 simultanées |
+| **Bande passante** | 5 Go/mois |
+| **Région** | Région unique |
 
-The main bottleneck is the **Supabase connection pool** (~60 connections). Under heavy load, database queries may queue up waiting for a free connection.
+Le principal goulot d'étranglement est le **pool de connexions Supabase** (~60 connexions). Sous forte charge, les requêtes à la base de données peuvent s'empiler en attendant une connexion libre.
 
-## What the results mean for the project
+## Ce que les résultats signifient pour le projet
 
-### Expected capacity
+### Capacité attendue
 
-With the current setup (single Node.js instance + Supabase free tier):
-- **Light load** (< 50 concurrent users): Response times under 100ms, no errors
-- **Medium load** (50-100 concurrent users): Response times under 500ms, occasional 429s from rate limiting
-- **Heavy load** (> 100 concurrent users): Database connection pool saturation, increased latency, some timeouts
+Avec la configuration actuelle (une seule instance Node.js + offre gratuite Supabase) :
+- **Charge légère** (< 50 utilisateurs simultanés) : Temps de réponse sous 100ms, pas d'erreurs
+- **Charge moyenne** (50-100 utilisateurs simultanés) : Temps de réponse sous 500ms, quelques 429 du rate limiting
+- **Charge forte** (> 100 utilisateurs simultanés) : Saturation du pool de connexions à la base, latence accrue, quelques timeouts
 
-### For the project context
+### Dans le contexte du projet
 
-This is a school project evaluated on architecture and code quality, not production scalability. The load testing demonstrates:
+C'est un projet scolaire évalué sur l'architecture et la qualité du code, pas sur la scalabilité en production. Les tests de charge démontrent :
 
-1. **The backend handles concurrent requests** without crashing
-2. **Rate limiting works** (429 responses appear under heavy load)
-3. **The architecture is sound** — Express handles requests asynchronously, Prisma manages connection pooling
-4. **Bottleneck is identified**: the Supabase free tier database, not the application code
+1. **Le backend gère les requêtes concurrentes** sans planter
+2. **Le rate limiting fonctionne** (les réponses 429 apparaissent sous forte charge)
+3. **L'architecture est saine** — Express gère les requêtes de manière asynchrone, Prisma gère le pool de connexions
+4. **Le goulot d'étranglement est identifié** : la base de données Supabase en offre gratuite, pas le code applicatif
 
-### How to improve capacity (for reference)
+### Comment améliorer la capacité (pour référence)
 
-| Improvement | Impact |
+| Amélioration | Impact |
 |-------------|--------|
-| Paid Supabase plan (more connections) | 2-5x more concurrent DB queries |
-| Connection pooling (PgBouncer) | Better connection reuse |
-| PM2 cluster mode (multiple Node.js instances) | Linear scaling with CPU cores |
-| Redis cache for read-heavy endpoints | Reduce database load by 50%+ |
-| Database indexing on frequently queried columns | Faster queries |
+| Plan Supabase payant (plus de connexions) | 2-5x plus de requêtes BDD simultanées |
+| Pool de connexions (PgBouncer) | Meilleure réutilisation des connexions |
+| Mode cluster PM2 (plusieurs instances Node.js) | Mise à l'échelle linéaire avec les cœurs CPU |
+| Cache Redis pour les endpoints de lecture | Réduction de 50%+ de la charge sur la base |
+| Indexation de la base sur les colonnes fréquemment requêtées | Requêtes plus rapides |
 
-These are not implemented because they're outside the project scope, but they demonstrate understanding of scaling strategies.
+Ces améliorations ne sont pas implémentées car elles sont hors du périmètre du projet, mais elles démontrent une compréhension des stratégies de mise à l'échelle.
 
-## Key metrics summary
+## Résumé des métriques clés
 
-| Metric | What to look for |
-|--------|-----------------|
-| **RPS** (Requests Per Second) | Higher is better. Shows throughput capacity |
-| **p95 latency** | 95th percentile response time. Should stay under 500ms |
-| **Error rate** | Percentage of non-2xx responses. Should stay under 5% (excluding expected 429s) |
-| **Scenarios completed / launched** | Should be close to 100%. If many fail, the server is overloaded |
+| Métrique | Ce qu'il faut observer |
+|----------|----------------------|
+| **RPS** (Requêtes Par Seconde) | Plus c'est élevé, mieux c'est. Montre la capacité de débit |
+| **Latence p95** | 95e percentile du temps de réponse. Devrait rester sous 500ms |
+| **Taux d'erreur** | Pourcentage de réponses non-2xx. Devrait rester sous 5% (hors 429 attendus) |
+| **Scénarios terminés / lancés** | Devrait être proche de 100%. Si beaucoup échouent, le serveur est surchargé |

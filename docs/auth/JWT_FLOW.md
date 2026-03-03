@@ -1,97 +1,103 @@
-# JWT Authentication Flow — Music Room
+# Flux d'authentification JWT — Music Room
 
-## What is JWT?
+## Qu'est-ce que JWT ?
 
-JWT (JSON Web Token) is a way to prove who you are without the server needing to remember you. After login, the server gives you a signed token containing your user ID and email. On every following request, you send this token back, and the server verifies the signature to confirm it's legit.
+JWT (JSON Web Token) est un moyen de prouver son identité sans que le serveur ait besoin de se souvenir de vous. Après la connexion, le serveur vous donne un token signé contenant votre identifiant utilisateur et votre email. À chaque requête suivante, vous renvoyez ce token, et le serveur vérifie la signature pour confirmer qu'il est légitime.
 
-Think of it as a concert wristband: you show your ID once at the entrance (login), get a wristband (JWT), and then just show the wristband to get in anywhere.
+C'est comme un bracelet de concert : vous montrez votre pièce d'identité une fois à l'entrée (connexion), vous recevez un bracelet (JWT), et ensuite vous montrez juste le bracelet pour accéder partout.
 
-## The two tokens
+## Les deux tokens
 
-Music Room uses two tokens:
+Music Room utilise deux tokens :
 
-| Token | Lifetime | Purpose | Secret |
-|-------|----------|---------|--------|
-| **Access Token** | 15 minutes | Used on every API request | `JWT_SECRET` |
-| **Refresh Token** | 7 days | Used to get a new access token when it expires | `JWT_REFRESH_SECRET` |
+| Token | Durée de vie | Objectif | Secret |
+|-------|-------------|----------|--------|
+| **Access Token** | 15 minutes | Utilisé à chaque requête API | `JWT_SECRET` |
+| **Refresh Token** | 7 jours | Utilisé pour obtenir un nouveau access token quand il expire | `JWT_REFRESH_SECRET` |
 
-Both tokens contain the same payload: `{ userId, email }`.
+Les deux tokens contiennent le même payload : `{ userId, email }`.
 
-Why two tokens? The access token is short-lived for security: if someone steals it, they only have 15 minutes. But we don't want users to re-login every 15 minutes, so the refresh token (stored securely on the device) can request a new access token silently.
+Pourquoi deux tokens ? L'access token a une durée de vie courte pour la sécurité : si quelqu'un le vole, il n'a que 15 minutes. Mais on ne veut pas que les utilisateurs se reconnectent toutes les 15 minutes, donc le refresh token (stocké de manière sécurisée sur l'appareil) peut demander un nouveau access token silencieusement.
 
-## Flow diagrams
+## Diagrammes de flux
 
-### Registration
+### Inscription
 
 ```
-Mobile                          Backend                         Database
+Mobile                          Backend                         Base de données
   │                                │                                │
   │  POST /api/auth/register       │                                │
   │  { email, password, name }     │                                │
   │───────────────────────────────▶│                                │
-  │                                │  Check if email exists          │
+  │                                │  Vérifier si l'email existe    │
   │                                │───────────────────────────────▶│
   │                                │◀───────────────────────────────│
   │                                │                                │
-  │                                │  Hash password (bcrypt, 10     │
-  │                                │  rounds)                       │
+  │                                │  Hasher le mot de passe        │
+  │                                │  (bcrypt, 10 tours)            │
   │                                │                                │
-  │                                │  Generate 6-digit verification │
-  │                                │  code (15min expiry)           │
+  │                                │  Générer un code de            │
+  │                                │  vérification à 6 chiffres     │
+  │                                │  (expiration 15min)            │
   │                                │                                │
-  │                                │  Create user in DB             │
+  │                                │  Créer l'utilisateur en BDD    │
   │                                │───────────────────────────────▶│
   │                                │◀───────────────────────────────│
   │                                │                                │
-  │                                │  Generate access token (15m)   │
-  │                                │  Generate refresh token (7d)   │
+  │                                │  Générer access token (15m)    │
+  │                                │  Générer refresh token (7j)    │
   │                                │                                │
   │  { user, accessToken,          │                                │
   │    refreshToken }              │                                │
   │◀───────────────────────────────│                                │
   │                                │                                │
-  │  Store tokens in AsyncStorage  │                                │
-  │  Navigate to email verification│                                │
+  │  Stocker les tokens dans       │                                │
+  │  AsyncStorage                  │                                │
+  │  Naviguer vers la vérification │                                │
+  │  email                         │                                │
 ```
 
-**Files involved**:
-- `backend/src/routes/auth.routes.ts` — Route definition with Zod validation
-- `backend/src/controllers/auth.controller.ts` — `register()` function
-- `backend/src/services/auth.service.ts:26-56` — Registration logic (hash, create, tokens)
-- `backend/src/schemas/auth.schema.ts` — `registerSchema` (email, password >=8 chars, name >=2 chars)
+**Fichiers impliqués** :
+- `backend/src/routes/auth.routes.ts` — Définition de la route avec validation Zod
+- `backend/src/controllers/auth.controller.ts` — Fonction `register()`
+- `backend/src/services/auth.service.ts:26-56` — Logique d'inscription (hash, création, tokens)
+- `backend/src/schemas/auth.schema.ts` — `registerSchema` (email, mot de passe >=8 car., nom >=2 car.)
 
-### Login
+### Connexion
 
 ```
-Mobile                          Backend                         Database
+Mobile                          Backend                         Base de données
   │                                │                                │
   │  POST /api/auth/login          │                                │
   │  { email, password }           │                                │
   │───────────────────────────────▶│                                │
-  │                                │  Find user by email            │
+  │                                │  Chercher l'utilisateur        │
+  │                                │  par email                     │
   │                                │───────────────────────────────▶│
   │                                │◀───────────────────────────────│
   │                                │                                │
   │                                │  bcrypt.compare(password,      │
   │                                │                  user.password)│
   │                                │                                │
-  │                                │  If invalid → 401              │
-  │                                │  If valid  → generate tokens   │
+  │                                │  Si invalide → 401             │
+  │                                │  Si valide → générer tokens    │
   │                                │                                │
   │  { user, accessToken,          │                                │
   │    refreshToken }              │                                │
   │◀───────────────────────────────│                                │
   │                                │                                │
-  │  Store tokens in AsyncStorage  │                                │
-  │  Parse userId from JWT payload │                                │
-  │  Navigate to Home              │                                │
+  │  Stocker les tokens dans       │                                │
+  │  AsyncStorage                  │                                │
+  │  Parser le userId du payload   │                                │
+  │  JWT                           │                                │
+  │  Naviguer vers l'accueil       │                                │
 ```
 
-**Files involved**:
-- `backend/src/services/auth.service.ts:58-75` — `login()` function
-- `mobile/src/store/authStore.ts` — `setTokens()` stores in AsyncStorage and parses JWT
+**Fichiers impliqués** :
+- `backend/src/services/auth.service.ts:58-75` — Fonction `login()`
+- `mobile/src/store/authStore.ts` — `setTokens()` stocke dans AsyncStorage et parse le JWT
 
-### Authenticated request (every API call)
+### Requête authentifiée (chaque appel API)
 
 ```
 Mobile                          Backend
@@ -106,36 +112,38 @@ Mobile                          Backend
   │                      ┌─────────┴─────────┐
   │                      │ auth.middleware.ts │
   │                      │                   │
-  │                      │ 1. Extract token  │
-  │                      │    from header    │
+  │                      │ 1. Extraire le    │
+  │                      │    token du header│
   │                      │                   │
   │                      │ 2. jwt.verify()   │
-  │                      │    with JWT_SECRET│
+  │                      │    avec JWT_SECRET│
   │                      │                   │
-  │                      │ 3. Attach payload │
-  │                      │    to req.user    │
+  │                      │ 3. Attacher le    │
+  │                      │    payload à      │
+  │                      │    req.user       │
   │                      │    { userId,      │
   │                      │      email }      │
   │                      │                   │
-  │                      │ If invalid:       │
-  │                      │ → 401 response    │
+  │                      │ Si invalide :     │
+  │                      │ → réponse 401     │
   │                      └─────────┬─────────┘
   │                                │
-  │                                │  Continue to controller...
-  │                                │  req.user.userId is available
+  │                                │  Continue vers le contrôleur...
+  │                                │  req.user.userId est disponible
 ```
 
-**File**: `backend/src/middleware/auth.middleware.ts` — 22 lines, checks `Authorization: Bearer <token>`, verifies signature, attaches `{ userId, email }` to `req.user`.
+**Fichier** : `backend/src/middleware/auth.middleware.ts` — 22 lignes, vérifie `Authorization: Bearer <token>`, vérifie la signature, attache `{ userId, email }` à `req.user`.
 
-### Token refresh (when access token expires)
+### Rafraîchissement du token (quand l'access token expire)
 
 ```
-Mobile                          Backend                         Database
+Mobile                          Backend                         Base de données
   │                                │                                │
-  │  Any API call fails with 401   │                                │
-  │  (access token expired)        │                                │
+  │  Un appel API échoue avec 401  │                                │
+  │  (access token expiré)         │                                │
   │                                │                                │
-  │  Axios interceptor catches 401 │                                │
+  │  L'intercepteur Axios capture  │                                │
+  │  le 401                        │                                │
   │                                │                                │
   │  POST /api/auth/refresh        │                                │
   │  { refreshToken }              │                                │
@@ -143,75 +151,81 @@ Mobile                          Backend                         Database
   │                                │  jwt.verify(refreshToken,      │
   │                                │           JWT_REFRESH_SECRET)  │
   │                                │                                │
-  │                                │  If invalid → 401              │
+  │                                │  Si invalide → 401             │
   │                                │                                │
-  │                                │  Find user by payload.userId   │
+  │                                │  Trouver l'utilisateur par     │
+  │                                │  payload.userId                │
   │                                │───────────────────────────────▶│
   │                                │◀───────────────────────────────│
   │                                │                                │
-  │                                │  Generate new token pair       │
+  │                                │  Générer une nouvelle paire    │
+  │                                │  de tokens                     │
   │                                │                                │
   │  { accessToken, refreshToken } │                                │
   │◀───────────────────────────────│                                │
   │                                │                                │
-  │  Update stored tokens          │                                │
-  │  Retry original request        │                                │
-  │  with new access token         │                                │
+  │  Mettre à jour les tokens      │                                │
+  │  stockés                       │                                │
+  │  Retenter la requête originale │                                │
+  │  avec le nouveau access token  │                                │
 ```
 
-**Files involved**:
-- `mobile/src/services/api.ts:29-57` — Axios response interceptor catches 401, calls refresh, retries
-- `backend/src/services/auth.service.ts:77-93` — `refreshToken()` verifies old refresh token, generates new pair
+**Fichiers impliqués** :
+- `mobile/src/services/api.ts:29-57` — L'intercepteur de réponse Axios capture le 401, appelle refresh, retente
+- `backend/src/services/auth.service.ts:77-93` — `refreshToken()` vérifie l'ancien refresh token, génère une nouvelle paire
 
-### Email verification
+### Vérification email
 
 ```
-Mobile                          Backend                         Database
+Mobile                          Backend                         Base de données
   │                                │                                │
   │  POST /api/auth/verify-email   │                                │
   │  { email, code: "123456" }     │                                │
   │───────────────────────────────▶│                                │
-  │                                │  Find user by email            │
+  │                                │  Trouver l'utilisateur         │
+  │                                │  par email                     │
   │                                │───────────────────────────────▶│
   │                                │◀───────────────────────────────│
   │                                │                                │
-  │                                │  Check: code matches?          │
-  │                                │  Check: not expired (15min)?   │
+  │                                │  Vérifier : le code             │
+  │                                │  correspond ?                   │
+  │                                │  Vérifier : pas expiré         │
+  │                                │  (15min) ?                     │
   │                                │                                │
-  │                                │  Update user:                  │
+  │                                │  Mettre à jour l'utilisateur : │
   │                                │  emailVerified = true          │
   │                                │  verificationCode = null       │
   │                                │───────────────────────────────▶│
   │                                │                                │
-  │  { message: "Email verified" } │                                │
+  │  { message: "Email vérifié" }  │                                │
   │◀───────────────────────────────│                                │
 ```
 
-**File**: `backend/src/services/auth.service.ts:95-123` — `verifyEmail()` function.
+**Fichier** : `backend/src/services/auth.service.ts:95-123` — Fonction `verifyEmail()`.
 
-Note: In development, the verification code is logged to the console (`console.log`) instead of being sent by email. This is intentional — the email service would be a production dependency.
+Note : En développement, le code de vérification est affiché dans la console (`console.log`) au lieu d'être envoyé par email. C'est intentionnel — le service d'envoi d'email serait une dépendance de production.
 
-### Password reset
+### Réinitialisation du mot de passe
 
 ```
 1. POST /api/auth/forgot-password { email }
-   → Generates a random 32-byte hex token (30min expiry)
-   → Logs token to console (no email sent in dev)
-   → Always returns same message (doesn't reveal if email exists)
+   → Génère un token hexadécimal aléatoire de 32 octets (expiration 30min)
+   → Log le token en console (pas d'email envoyé en dev)
+   → Retourne toujours le même message (ne révèle pas si l'email existe)
 
 2. POST /api/auth/reset-password { token, password }
-   → Finds user with matching non-expired token
-   → Hashes new password with bcrypt
-   → Clears reset token from database
+   → Trouve l'utilisateur avec le token correspondant non expiré
+   → Hashe le nouveau mot de passe avec bcrypt
+   → Efface le token de réinitialisation de la base de données
 ```
 
-**File**: `backend/src/services/auth.service.ts:125-167` — `forgotPassword()` and `resetPassword()`.
+**Fichier** : `backend/src/services/auth.service.ts:125-167` — `forgotPassword()` et `resetPassword()`.
 
-## Token structure
+## Structure du token
 
-Both tokens are standard JWTs with three parts: `header.payload.signature`
+Les deux tokens sont des JWT standards avec trois parties : `header.payload.signature`
 
-**Payload**:
+**Payload** :
 ```json
 {
   "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -221,14 +235,14 @@ Both tokens are standard JWTs with three parts: `header.payload.signature`
 }
 ```
 
-- `iat` (issued at): when the token was created
-- `exp` (expiration): when it becomes invalid (15 min for access, 7 days for refresh)
+- `iat` (issued at) : quand le token a été créé
+- `exp` (expiration) : quand il devient invalide (15 min pour l'access, 7 jours pour le refresh)
 
-The signature is created using HMAC-SHA256 with the secret key. If anyone modifies the payload, the signature won't match, and `jwt.verify()` will reject it.
+La signature est créée avec HMAC-SHA256 et la clé secrète. Si quelqu'un modifie le payload, la signature ne correspondra plus, et `jwt.verify()` le rejettera.
 
-## Token storage on mobile
+## Stockage des tokens sur mobile
 
-Tokens are stored in **AsyncStorage** (React Native's local key-value store):
+Les tokens sont stockés dans **AsyncStorage** (le stockage clé-valeur local de React Native) :
 
 ```
 asyncStorage:
@@ -236,13 +250,13 @@ asyncStorage:
   auth_refresh_token → "eyJhbGciOiJIUzI1..."
 ```
 
-On app startup, `authStore.loadTokens()` reads these from AsyncStorage and restores the session without requiring a new login.
+Au démarrage de l'application, `authStore.loadTokens()` lit ces valeurs depuis AsyncStorage et restaure la session sans nécessiter une nouvelle connexion.
 
-**File**: `mobile/src/store/authStore.ts` — Zustand store with `setTokens()`, `logout()`, and `loadTokens()`.
+**Fichier** : `mobile/src/store/authStore.ts` — Store Zustand avec `setTokens()`, `logout()` et `loadTokens()`.
 
-## Security considerations
+## Considérations de sécurité
 
-- **Access token in memory + AsyncStorage**: The Zustand store holds the current token in memory for fast access, and persists to AsyncStorage for session restoration
-- **No token in URL**: Tokens are always in the `Authorization` header, never in query parameters
-- **Refresh token rotation**: Each refresh generates a completely new pair of tokens
-- **Secret separation**: Access and refresh tokens use different secrets (`JWT_SECRET` vs `JWT_REFRESH_SECRET`)
+- **Access token en mémoire + AsyncStorage** : Le store Zustand garde le token actuel en mémoire pour un accès rapide, et le persiste dans AsyncStorage pour la restauration de session
+- **Pas de token dans l'URL** : Les tokens sont toujours dans le header `Authorization`, jamais dans les paramètres de requête
+- **Rotation du refresh token** : Chaque rafraîchissement génère une paire de tokens complètement nouvelle
+- **Séparation des secrets** : Les tokens d'accès et de rafraîchissement utilisent des secrets différents (`JWT_SECRET` vs `JWT_REFRESH_SECRET`)

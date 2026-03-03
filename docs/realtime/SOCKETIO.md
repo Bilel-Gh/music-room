@@ -1,10 +1,10 @@
-# Real-time with Socket.io — Music Room
+# Temps réel avec Socket.io — Music Room
 
-## What is Socket.io?
+## Qu'est-ce que Socket.io ?
 
-Socket.io is a library that keeps a permanent connection between the mobile app and the backend. Unlike REST API calls (where the mobile asks and the backend responds), Socket.io allows the backend to push data to the mobile at any time, without being asked. This is what makes the app "real-time": when someone votes, all other users see the change instantly.
+Socket.io est une bibliothèque qui maintient une connexion permanente entre l'application mobile et le backend. Contrairement aux appels API REST (où le mobile demande et le backend répond), Socket.io permet au backend de pousser des données vers le mobile à tout moment, sans qu'on lui demande. C'est ce qui rend l'application "temps réel" : quand quelqu'un vote, tous les autres utilisateurs voient le changement instantanément.
 
-Under the hood, Socket.io uses WebSockets (a protocol that keeps the connection open). If WebSockets aren't available (rare), it falls back to HTTP long-polling.
+Sous le capot, Socket.io utilise les WebSockets (un protocole qui garde la connexion ouverte). Si les WebSockets ne sont pas disponibles (rare), il repasse en HTTP long-polling.
 
 ## Architecture
 
@@ -13,26 +13,27 @@ Under the hood, Socket.io uses WebSockets (a protocol that keeps the connection 
 │                         BACKEND (Express + Socket.io)             │
 │                                                                   │
 │  ┌─────────────────────────────────────────────────────────────┐  │
-│  │                    Socket.io Server                          │  │
+│  │                    Serveur Socket.io                          │  │
 │  │                                                             │  │
 │  │  ┌─────────────────┐  ┌──────────────────┐                 │  │
-│  │  │  Room:           │  │  Room:            │                │  │
+│  │  │  Room :          │  │  Room :            │                │  │
 │  │  │  event:abc-123   │  │  playlist:def-456 │                │  │
 │  │  │                  │  │                   │                │  │
-│  │  │  - User A socket │  │  - User B socket  │                │  │
-│  │  │  - User B socket │  │  - User C socket  │                │  │
-│  │  │  - User C socket │  │                   │                │  │
+│  │  │  - Socket User A │  │  - Socket User B  │                │  │
+│  │  │  - Socket User B │  │  - Socket User C  │                │  │
+│  │  │  - Socket User C │  │                   │                │  │
 │  │  └─────────────────┘  └──────────────────┘                 │  │
 │  │                                                             │  │
 │  │  ┌─────────────────┐  ┌──────────────────┐                 │  │
-│  │  │  Room:           │  │  Room:            │                │  │
+│  │  │  Room :          │  │  Room :            │                │  │
 │  │  │  user:user-A-id  │  │  user:user-B-id  │                │  │
 │  │  │                  │  │                   │                │  │
-│  │  │  - User A socket │  │  - User B socket  │                │  │
+│  │  │  - Socket User A │  │  - Socket User B  │                │  │
 │  │  └─────────────────┘  └──────────────────┘                 │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 │                                                                   │
-│  Controllers emit events after database operations:               │
+│  Les contrôleurs émettent des événements après les opérations     │
+│  en base de données :                                             │
 │  - event.controller.ts → trackAdded, trackVoted, eventCreated     │
 │  - playlist.controller.ts → playlistTrackAdded/Removed/Reordered  │
 │  - user.controller.ts → friendRequestReceived                     │
@@ -46,56 +47,56 @@ Under the hood, Socket.io uses WebSockets (a protocol that keeps the connection 
     └─────────┘          └─────────┘          └─────────┘
 ```
 
-## How rooms work
+## Comment fonctionnent les rooms
 
-Rooms are Socket.io's way of grouping connections. Instead of sending an update to every connected user, we send it only to users in a specific room.
+Les rooms sont le moyen de Socket.io de regrouper les connexions. Au lieu d'envoyer une mise à jour à chaque utilisateur connecté, on l'envoie uniquement aux utilisateurs dans une room spécifique.
 
-There are three types of rooms:
+Il y a trois types de rooms :
 
-| Room pattern | Purpose | Example |
-|-------------|---------|---------|
-| `event:{eventId}` | Users viewing a specific event | `event:abc-123` |
-| `playlist:{playlistId}` | Users editing a specific playlist | `playlist:def-456` |
-| `user:{userId}` | Personal notifications for a user | `user:user-A-id` |
+| Pattern de room | Objectif | Exemple |
+|----------------|----------|---------|
+| `event:{eventId}` | Utilisateurs consultant un événement spécifique | `event:abc-123` |
+| `playlist:{playlistId}` | Utilisateurs éditant une playlist spécifique | `playlist:def-456` |
+| `user:{userId}` | Notifications personnelles pour un utilisateur | `user:user-A-id` |
 
-A user **joins a room** when they open the corresponding screen, and **leaves** when they navigate away.
+Un utilisateur **rejoint une room** quand il ouvre l'écran correspondant, et **la quitte** quand il navigue ailleurs.
 
-## Events reference
+## Référence des événements
 
-### Events FROM the mobile TO the backend (ClientToServerEvents)
+### Événements DU mobile VERS le backend (ClientToServerEvents)
 
-| Event | Payload | When it's sent | What it does |
-|-------|---------|----------------|-------------|
-| `authenticate` | `userId: string` | On socket connect | Joins `user:{userId}` room for personal notifications |
-| `joinEvent` | `eventId: string` | Opening EventScreen | Joins `event:{eventId}` room |
-| `leaveEvent` | `eventId: string` | Leaving EventScreen | Leaves `event:{eventId}` room |
-| `joinPlaylist` | `playlistId: string` | Opening PlaylistScreen | Joins `playlist:{playlistId}` room |
-| `leavePlaylist` | `playlistId: string` | Leaving PlaylistScreen | Leaves `playlist:{playlistId}` room |
+| Événement | Payload | Quand il est envoyé | Ce qu'il fait |
+|-----------|---------|---------------------|---------------|
+| `authenticate` | `userId: string` | À la connexion du socket | Rejoint la room `user:{userId}` pour les notifications personnelles |
+| `joinEvent` | `eventId: string` | Ouverture de l'EventScreen | Rejoint la room `event:{eventId}` |
+| `leaveEvent` | `eventId: string` | Quitter l'EventScreen | Quitte la room `event:{eventId}` |
+| `joinPlaylist` | `playlistId: string` | Ouverture du PlaylistScreen | Rejoint la room `playlist:{playlistId}` |
+| `leavePlaylist` | `playlistId: string` | Quitter le PlaylistScreen | Quitte la room `playlist:{playlistId}` |
 
-### Events FROM the backend TO the mobile (ServerToClientEvents)
+### Événements DU backend VERS le mobile (ServerToClientEvents)
 
-| Event | Payload | When it's emitted | Who receives it |
-|-------|---------|-------------------|----------------|
-| `trackAdded` | `{ eventId, tracks[] }` | After adding a track to an event | Room `event:{eventId}` |
-| `trackVoted` | `{ eventId, tracks[] }` | After a vote is cast/removed | Room `event:{eventId}` |
-| `playlistTrackAdded` | `{ playlistId, tracks[] }` | After adding a track to a playlist | Room `playlist:{playlistId}` |
-| `playlistTrackRemoved` | `{ playlistId, tracks[] }` | After removing a track from a playlist | Room `playlist:{playlistId}` |
-| `playlistTrackReordered` | `{ playlistId, tracks[] }` | After reordering a playlist track | Room `playlist:{playlistId}` |
-| `eventCreated` | `{ event }` | After creating a public event | **All connected clients** (global) |
-| `eventDeleted` | `{ eventId }` | After deleting an event | **All connected clients** (global) |
-| `playlistCreated` | `{ playlist }` | After creating a public playlist | **All connected clients** (global) |
-| `playlistDeleted` | `{ playlistId }` | After deleting a playlist | **All connected clients** (global) |
-| `friendRequestReceived` | `{ from: { id, name, email } }` | After sending a friend request | Room `user:{targetUserId}` |
-| `invitationReceived` | `{ type, name }` | After inviting to event/playlist | Room `user:{targetUserId}` |
+| Événement | Payload | Quand il est émis | Qui le reçoit |
+|-----------|---------|-------------------|---------------|
+| `trackAdded` | `{ eventId, tracks[] }` | Après l'ajout d'un morceau à un événement | Room `event:{eventId}` |
+| `trackVoted` | `{ eventId, tracks[] }` | Après un vote ajouté/supprimé | Room `event:{eventId}` |
+| `playlistTrackAdded` | `{ playlistId, tracks[] }` | Après l'ajout d'un morceau à une playlist | Room `playlist:{playlistId}` |
+| `playlistTrackRemoved` | `{ playlistId, tracks[] }` | Après la suppression d'un morceau d'une playlist | Room `playlist:{playlistId}` |
+| `playlistTrackReordered` | `{ playlistId, tracks[] }` | Après le réordonnancement d'un morceau de playlist | Room `playlist:{playlistId}` |
+| `eventCreated` | `{ event }` | Après la création d'un événement public | **Tous les clients connectés** (global) |
+| `eventDeleted` | `{ eventId }` | Après la suppression d'un événement | **Tous les clients connectés** (global) |
+| `playlistCreated` | `{ playlist }` | Après la création d'une playlist publique | **Tous les clients connectés** (global) |
+| `playlistDeleted` | `{ playlistId }` | Après la suppression d'une playlist | **Tous les clients connectés** (global) |
+| `friendRequestReceived` | `{ from: { id, name, email } }` | Après l'envoi d'une demande d'ami | Room `user:{targetUserId}` |
+| `invitationReceived` | `{ type, name }` | Après une invitation à un événement/playlist | Room `user:{targetUserId}` |
 
-## Concrete flow: voting on a track
+## Flux concret : voter sur un morceau
 
-Here's exactly what happens when User A votes on a track, and User B sees the update:
+Voici exactement ce qui se passe quand l'utilisateur A vote sur un morceau, et l'utilisateur B voit la mise à jour :
 
 ```
 User A (mobile)                Backend                    User B (mobile)
      │                            │                            │
-     │ [Already in room            │  [Already in room          │
+     │ [Déjà dans la room         │  [Déjà dans la room        │
      │  event:abc-123]            │   event:abc-123]           │
      │                            │                            │
      │ POST /api/events/abc-123/  │                            │
@@ -103,10 +104,11 @@ User A (mobile)                Backend                    User B (mobile)
      │───────────────────────────▶│                            │
      │                            │                            │
      │                            │ 1. voteService.voteForTrack()
-     │                            │    (Prisma transaction)    │
+     │                            │    (transaction Prisma)    │
      │                            │                            │
-     │                            │ 2. Get updated track list  │
-     │                            │    sorted by voteCount     │
+     │                            │ 2. Récupérer la liste des  │
+     │                            │    morceaux mise à jour,   │
+     │                            │    triée par voteCount     │
      │                            │                            │
      │                            │ 3. io.to('event:abc-123')  │
      │                            │    .emit('trackVoted', {   │
@@ -114,38 +116,39 @@ User A (mobile)                Backend                    User B (mobile)
      │                            │    })                      │
      │                            │────────────────────────────▶│
      │                            │                            │
-     │ 4. HTTP response:           │                            │ 5. Socket receives
+     │ 4. Réponse HTTP :          │                            │ 5. Le socket reçoit
      │ { success, data, voted }   │                            │    'trackVoted'
-     │◀───────────────────────────│                            │    → Update UI with
-     │                            │                            │      new track list
-     │ 6. Update own UI           │                            │
+     │◀───────────────────────────│                            │    → Mettre à jour
+     │                            │                            │      l'UI avec la
+     │ 6. Mettre à jour           │                            │      nouvelle liste
+     │    sa propre UI            │                            │
 ```
 
-**Key files**:
-- `backend/src/controllers/event.controller.ts:159-178` — `voteForTrack()` controller emits `trackVoted`
-- `mobile/src/screens/EventScreen.tsx` — Listens for `trackVoted` event and updates the track list state
+**Fichiers clés** :
+- `backend/src/controllers/event.controller.ts:159-178` — Le contrôleur `voteForTrack()` émet `trackVoted`
+- `mobile/src/screens/EventScreen.tsx` — Écoute l'événement `trackVoted` et met à jour l'état de la liste de morceaux
 
-## Backend implementation
+## Implémentation côté backend
 
-### Server setup
+### Configuration du serveur
 
-**File**: `backend/src/config/socket.ts`
+**Fichier** : `backend/src/config/socket.ts`
 
 ```typescript
 import { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 
-// Typed events for type safety
+// Événements typés pour la sécurité des types
 interface ServerToClientEvents {
   trackAdded: (data: { eventId: string; tracks: unknown[] }) => void;
   trackVoted: (data: { eventId: string; tracks: unknown[] }) => void;
-  // ... all other events
+  // ... tous les autres événements
 }
 
 interface ClientToServerEvents {
   joinEvent: (eventId: string) => void;
   leaveEvent: (eventId: string) => void;
-  // ... all other events
+  // ... tous les autres événements
 }
 
 let io: Server<ClientToServerEvents, ServerToClientEvents> | null = null;
@@ -167,11 +170,11 @@ export function initSocketServer(httpServer: HttpServer) {
 export function getIO() { return io; }
 ```
 
-### Emitting from controllers
+### Émission depuis les contrôleurs
 
-Controllers import `getIO()` and emit after the database operation succeeds:
+Les contrôleurs importent `getIO()` et émettent après le succès de l'opération en base de données :
 
-**File**: `backend/src/controllers/event.controller.ts:105-121`
+**Fichier** : `backend/src/controllers/event.controller.ts:105-121`
 
 ```typescript
 export async function addTrack(req, res, next) {
@@ -192,7 +195,7 @@ export async function addTrack(req, res, next) {
 }
 ```
 
-**File**: `backend/src/controllers/playlist.controller.ts:5-10` — Helper function for playlist updates:
+**Fichier** : `backend/src/controllers/playlist.controller.ts:5-10` — Fonction utilitaire pour les mises à jour de playlist :
 
 ```typescript
 async function emitPlaylistUpdate(playlistId, userId, event) {
@@ -203,30 +206,30 @@ async function emitPlaylistUpdate(playlistId, userId, event) {
 }
 ```
 
-## Mobile implementation
+## Implémentation côté mobile
 
-### Socket client
+### Client Socket
 
-**File**: `mobile/src/services/socket.ts`
+**Fichier** : `mobile/src/services/socket.ts`
 
-The mobile creates a single Socket.io connection to the backend:
+Le mobile crée une seule connexion Socket.io vers le backend :
 
 ```typescript
 const socket = io(API_URL, {
-  transports: ['websocket'],  // WebSocket first, no polling
-  autoConnect: false,          // Connect manually after login
+  transports: ['websocket'],  // WebSocket d'abord, pas de polling
+  autoConnect: false,          // Connexion manuelle après la connexion
 });
 
 socket.on('connect', () => {
-  // Automatically join user room for notifications
+  // Rejoindre automatiquement la room utilisateur pour les notifications
   const userId = useAuthStore.getState().userId;
   if (userId) socket.emit('authenticate', userId);
 });
 ```
 
-### Listening in screens
+### Écoute dans les écrans
 
-In `EventScreen.tsx`, the component joins the event room on mount and leaves on unmount:
+Dans `EventScreen.tsx`, le composant rejoint la room de l'événement au montage et la quitte au démontage :
 
 ```typescript
 useEffect(() => {
@@ -248,11 +251,11 @@ useEffect(() => {
 }, [eventId]);
 ```
 
-### Notification listeners
+### Écouteurs de notifications
 
-**File**: `mobile/src/services/socket.ts:15-23`
+**Fichier** : `mobile/src/services/socket.ts:15-23`
 
-For global notifications (friend requests, invitations), the socket service uses a callback-based pattern instead of React hooks, because these listeners need to work across all screens:
+Pour les notifications globales (demandes d'amis, invitations), le service socket utilise un pattern basé sur des callbacks au lieu de hooks React, car ces écouteurs doivent fonctionner sur tous les écrans :
 
 ```typescript
 const friendRequestListeners: Set<FriendRequestListener> = new Set();
@@ -267,13 +270,13 @@ socket.on('friendRequestReceived', (data) => {
 });
 ```
 
-The `NotificationsScreen` and `AppNavigator` subscribe to these listeners to show badges and notifications.
+Le `NotificationsScreen` et l'`AppNavigator` s'abonnent à ces écouteurs pour afficher des badges et des notifications.
 
-## Type safety
+## Sécurité des types
 
-Both `ServerToClientEvents` and `ClientToServerEvents` are TypeScript interfaces. This means:
-- If the backend emits an event with the wrong payload shape, TypeScript catches it at compile time
-- If the mobile listens for an event that doesn't exist, TypeScript catches it
-- IDE autocompletion shows all available events and their payloads
+`ServerToClientEvents` et `ClientToServerEvents` sont des interfaces TypeScript. Cela signifie :
+- Si le backend émet un événement avec la mauvaise structure de payload, TypeScript le détecte à la compilation
+- Si le mobile écoute un événement qui n'existe pas, TypeScript le détecte
+- L'autocomplétion de l'IDE affiche tous les événements disponibles et leurs payloads
 
-This eliminates the "silent failure" problem common with Socket.io, where a typo in an event name (`trackAdded` vs `trackadded`) would silently drop messages.
+Cela élimine le problème des "échecs silencieux" courant avec Socket.io, où une faute de frappe dans un nom d'événement (`trackAdded` vs `trackadded`) ferait silencieusement disparaître les messages.

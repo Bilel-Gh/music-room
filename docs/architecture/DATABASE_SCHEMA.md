@@ -1,8 +1,8 @@
-# Database Schema — Music Room
+# Schéma de la base de données — Music Room
 
-The database is a PostgreSQL instance hosted on Supabase. The schema is defined in `backend/prisma/schema.prisma` and managed through Prisma migrations.
+La base de données est une instance PostgreSQL hébergée sur Supabase. Le schéma est défini dans `backend/prisma/schema.prisma` et géré via les migrations Prisma.
 
-## Schema overview
+## Vue d'ensemble du schéma
 
 ```
 ┌──────────────────┐         ┌──────────────────┐
@@ -24,7 +24,7 @@ The database is a PostgreSQL instance hosted on Supabase. The schema is defined 
 │ resetToken?      │
 └────────┬─────────┘
          │
-         │ User creates/participates in...
+         │ L'utilisateur crée/participe à...
          │
     ┌────┴──────────────────────────────────────────────┐
     │                                                    │
@@ -65,158 +65,158 @@ The database is a PostgreSQL instance hosted on Supabase. The schema is defined 
 │ id     │
 │ trackId│
 │ userId │
-│ (unique│
-│  pair) │
+│ (paire │
+│ unique)│
 └────────┘
 ```
 
-## Tables explained
+## Explication des tables
 
 ### User
 
-The central table. Stores authentication info and profile data.
+La table centrale. Stocke les informations d'authentification et les données de profil.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key, auto-generated |
-| `email` | String (unique) | Login email |
-| `password` | String? | Bcrypt hash. Null if user signed up via Google only |
-| `name` | String | Display name |
-| `googleId` | String? (unique) | Google OAuth identifier, null if not linked |
-| `emailVerified` | Boolean | Whether the email has been confirmed |
-| `isAdmin` | Boolean | Admin flag |
-| `isPremium` | Boolean | Premium subscription flag (gates playlist creation) |
-| `publicInfo` | String? | Profile info visible to everyone |
-| `friendsInfo` | String? | Profile info visible only to friends |
-| `privateInfo` | String? | Profile info visible only to the user |
-| `musicPreferences` | String[] | Array of music genre preferences |
-| `verificationCode` | String? | 6-digit email verification code |
-| `verificationCodeExpiry` | DateTime? | Code expiration (15 min after generation) |
-| `resetToken` | String? | Password reset token |
-| `resetTokenExpiry` | DateTime? | Reset token expiration (30 min) |
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `id` | UUID | Clé primaire, auto-générée |
+| `email` | String (unique) | Email de connexion |
+| `password` | String? | Hash bcrypt. Null si l'utilisateur s'est inscrit uniquement via Google |
+| `name` | String | Nom d'affichage |
+| `googleId` | String? (unique) | Identifiant Google OAuth, null si non lié |
+| `emailVerified` | Boolean | Si l'email a été confirmé |
+| `isAdmin` | Boolean | Flag administrateur |
+| `isPremium` | Boolean | Flag abonnement premium (contrôle la création de playlists) |
+| `publicInfo` | String? | Infos de profil visibles par tout le monde |
+| `friendsInfo` | String? | Infos de profil visibles uniquement par les amis |
+| `privateInfo` | String? | Infos de profil visibles uniquement par l'utilisateur |
+| `musicPreferences` | String[] | Tableau de préférences musicales par genre |
+| `verificationCode` | String? | Code de vérification email à 6 chiffres |
+| `verificationCodeExpiry` | DateTime? | Expiration du code (15 min après génération) |
+| `resetToken` | String? | Token de réinitialisation du mot de passe |
+| `resetTokenExpiry` | DateTime? | Expiration du token de réinitialisation (30 min) |
 
-The profile visibility system uses three levels: `publicInfo` (anyone can see), `friendsInfo` (only accepted friends), `privateInfo` (only the user themselves). The backend checks the relationship between viewer and profile owner before deciding which fields to include in the response.
+Le système de visibilité du profil utilise trois niveaux : `publicInfo` (visible par tous), `friendsInfo` (uniquement les amis acceptés), `privateInfo` (uniquement l'utilisateur lui-même). Le backend vérifie la relation entre le visiteur et le propriétaire du profil avant de décider quels champs inclure dans la réponse.
 
 ### Friendship
 
-Tracks friend relationships between two users.
+Suit les relations d'amitié entre deux utilisateurs.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `userId` | UUID (FK → User) | The user who sent the request |
-| `friendId` | UUID (FK → User) | The user who received the request |
-| `status` | String | `PENDING` (request sent) or `ACCEPTED` (friends) |
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `userId` | UUID (FK → User) | L'utilisateur qui a envoyé la demande |
+| `friendId` | UUID (FK → User) | L'utilisateur qui a reçu la demande |
+| `status` | String | `PENDING` (demande envoyée) ou `ACCEPTED` (amis) |
 
-**Unique constraint**: `@@unique([userId, friendId])` — can't send the same request twice.
+**Contrainte d'unicité** : `@@unique([userId, friendId])` — impossible d'envoyer la même demande deux fois.
 
-A friendship always starts as `PENDING` when user A sends a request to user B. When B accepts, the status changes to `ACCEPTED`. To check if two users are friends, the backend looks for an `ACCEPTED` friendship in either direction.
+Une amitié commence toujours en `PENDING` quand l'utilisateur A envoie une demande à l'utilisateur B. Quand B accepte, le statut passe à `ACCEPTED`. Pour vérifier si deux utilisateurs sont amis, le backend cherche une amitié `ACCEPTED` dans les deux sens.
 
 ### Event
 
-A music voting session where participants add tracks and vote.
+Une session de vote musical où les participants ajoutent des morceaux et votent.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `name` | String | Event name |
-| `creatorId` | UUID (FK → User) | Who created it |
-| `isPublic` | Boolean | Whether it shows in the public feed |
-| `licenseType` | Enum | `OPEN`, `INVITE_ONLY`, or `LOCATION_TIME` |
-| `startTime` / `endTime` | DateTime? | Time window for LOCATION_TIME events |
-| `latitude` / `longitude` | Float? | GPS coordinates for LOCATION_TIME events |
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `name` | String | Nom de l'événement |
+| `creatorId` | UUID (FK → User) | Qui l'a créé |
+| `isPublic` | Boolean | S'il apparaît dans le fil public |
+| `licenseType` | Enum | `OPEN`, `INVITE_ONLY`, ou `LOCATION_TIME` |
+| `startTime` / `endTime` | DateTime? | Fenêtre temporelle pour les événements LOCATION_TIME |
+| `latitude` / `longitude` | Float? | Coordonnées GPS pour les événements LOCATION_TIME |
 
-**License types**:
-- `OPEN`: anyone can join, add tracks, and vote
-- `INVITE_ONLY`: only explicitly invited members can participate
-- `LOCATION_TIME`: must be within 5km of the event location AND within the time window
+**Types de licence** :
+- `OPEN` : n'importe qui peut rejoindre, ajouter des morceaux et voter
+- `INVITE_ONLY` : seuls les membres explicitement invités peuvent participer
+- `LOCATION_TIME` : il faut être dans un rayon de 5 km de l'événement ET dans la fenêtre temporelle
 
 ### Track
 
-A music track added to an event for voting.
+Un morceau de musique ajouté à un événement pour le vote.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `eventId` | UUID (FK → Event) | Which event this track belongs to |
-| `title` | String | Track title |
-| `artist` | String | Artist name |
-| `externalUrl` | String? | Optional link (Spotify, YouTube...) |
-| `addedById` | UUID (FK → User) | Who added it |
-| `voteCount` | Int | Cached vote count (denormalized for performance) |
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `eventId` | UUID (FK → Event) | À quel événement appartient ce morceau |
+| `title` | String | Titre du morceau |
+| `artist` | String | Nom de l'artiste |
+| `externalUrl` | String? | Lien optionnel (Spotify, YouTube...) |
+| `addedById` | UUID (FK → User) | Qui l'a ajouté |
+| `voteCount` | Int | Compteur de votes mis en cache (dénormalisé pour la performance) |
 
-`voteCount` is a denormalized field — it duplicates data that could be computed from the `Vote` table. This avoids running `COUNT(*)` on every track list request. It's updated atomically inside a Prisma transaction when a vote is added or removed.
+`voteCount` est un champ dénormalisé — il duplique des données qui pourraient être calculées à partir de la table `Vote`. Cela évite d'exécuter un `COUNT(*)` à chaque requête de liste de morceaux. Il est mis à jour de manière atomique dans une transaction Prisma quand un vote est ajouté ou supprimé.
 
-**Cascade delete**: when an event is deleted, all its tracks are automatically removed.
+**Suppression en cascade** : quand un événement est supprimé, tous ses morceaux sont automatiquement supprimés.
 
 ### Vote
 
-Records that a user voted for a specific track. Implements a toggle: voting again removes the vote.
+Enregistre qu'un utilisateur a voté pour un morceau spécifique. Fonctionne en toggle : voter à nouveau supprime le vote.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `trackId` | UUID (FK → Track) | The track being voted on |
-| `userId` | UUID (FK → User) | Who voted |
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `trackId` | UUID (FK → Track) | Le morceau pour lequel on vote |
+| `userId` | UUID (FK → User) | Qui a voté |
 
-**Unique constraint**: `@@unique([trackId, userId])` — one vote per user per track, enforced at the database level.
+**Contrainte d'unicité** : `@@unique([trackId, userId])` — un vote par utilisateur par morceau, appliqué au niveau de la base de données.
 
 ### EventMember
 
-Links users to events with a role.
+Lie les utilisateurs aux événements avec un rôle.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `eventId` | UUID (FK → Event) | The event |
-| `userId` | UUID (FK → User) | The member |
-| `role` | Enum | `CREATOR`, `INVITED`, or `PARTICIPANT` |
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `eventId` | UUID (FK → Event) | L'événement |
+| `userId` | UUID (FK → User) | Le membre |
+| `role` | Enum | `CREATOR`, `INVITED`, ou `PARTICIPANT` |
 
-**Unique constraint**: `@@unique([eventId, userId])` — a user can only be a member once.
+**Contrainte d'unicité** : `@@unique([eventId, userId])` — un utilisateur ne peut être membre qu'une seule fois.
 
-The creator is automatically added as `CREATOR` when the event is created. Invited users start as `INVITED` and become `PARTICIPANT` when they accept.
+Le créateur est automatiquement ajouté en tant que `CREATOR` quand l'événement est créé. Les utilisateurs invités commencent en `INVITED` et deviennent `PARTICIPANT` quand ils acceptent.
 
 ### Playlist
 
-A collaborative playlist where members can add, remove, and reorder tracks.
+Une playlist collaborative où les membres peuvent ajouter, supprimer et réordonner des morceaux.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `name` | String | Playlist name |
-| `creatorId` | UUID (FK → User) | Who created it |
-| `isPublic` | Boolean | Whether it shows in the public feed |
-| `licenseType` | Enum | `OPEN` or `INVITE_ONLY` |
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `name` | String | Nom de la playlist |
+| `creatorId` | UUID (FK → User) | Qui l'a créée |
+| `isPublic` | Boolean | Si elle apparaît dans le fil public |
+| `licenseType` | Enum | `OPEN` ou `INVITE_ONLY` |
 
 ### PlaylistTrack
 
-A track in a playlist, with a position for ordering.
+Un morceau dans une playlist, avec une position pour l'ordre.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `playlistId` | UUID (FK → Playlist) | Which playlist |
-| `title` | String | Track title |
-| `artist` | String | Artist name |
-| `position` | Int | Order in the playlist (0-indexed) |
-| `addedById` | UUID (FK → User) | Who added it |
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `playlistId` | UUID (FK → Playlist) | Quelle playlist |
+| `title` | String | Titre du morceau |
+| `artist` | String | Nom de l'artiste |
+| `position` | Int | Ordre dans la playlist (indexé à 0) |
+| `addedById` | UUID (FK → User) | Qui l'a ajouté |
 
-The `position` field is managed via Prisma transactions: when a track is moved or removed, all affected positions are recalculated atomically.
+Le champ `position` est géré via des transactions Prisma : quand un morceau est déplacé ou supprimé, toutes les positions affectées sont recalculées de manière atomique.
 
 ### PlaylistMember
 
-Links users to playlists with edit permissions.
+Lie les utilisateurs aux playlists avec des permissions d'édition.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `playlistId` | UUID (FK → Playlist) | The playlist |
-| `userId` | UUID (FK → User) | The member |
-| `canEdit` | Boolean | Whether the member can add/remove/reorder tracks |
-| `status` | String | `INVITED` or `ACCEPTED` |
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `playlistId` | UUID (FK → Playlist) | La playlist |
+| `userId` | UUID (FK → User) | Le membre |
+| `canEdit` | Boolean | Si le membre peut ajouter/supprimer/réordonner des morceaux |
+| `status` | String | `INVITED` ou `ACCEPTED` |
 
-**Unique constraint**: `@@unique([playlistId, userId])` — one membership per user per playlist.
+**Contrainte d'unicité** : `@@unique([playlistId, userId])` — une seule appartenance par utilisateur par playlist.
 
-## Key design decisions
+## Décisions de conception clés
 
-1. **UUIDs as primary keys**: All IDs are UUIDs (`@default(uuid())`). Unlike auto-incrementing integers, UUIDs can be generated client-side and don't expose how many records exist.
+1. **UUID comme clés primaires** : Tous les ID sont des UUID (`@default(uuid())`). Contrairement aux entiers auto-incrémentés, les UUID peuvent être générés côté client et ne révèlent pas combien d'enregistrements existent.
 
-2. **Denormalized voteCount**: The `Track.voteCount` field avoids expensive `COUNT(*)` queries. It's kept consistent through Prisma transactions that update it when votes are added/removed.
+2. **voteCount dénormalisé** : Le champ `Track.voteCount` évite les requêtes `COUNT(*)` coûteuses. Il reste cohérent grâce aux transactions Prisma qui le mettent à jour lors de l'ajout/suppression de votes.
 
-3. **Cascade deletes**: `onDelete: Cascade` on Track, Vote, EventMember, PlaylistTrack, and PlaylistMember ensures that deleting an event or playlist cleans up all related records automatically.
+3. **Suppressions en cascade** : `onDelete: Cascade` sur Track, Vote, EventMember, PlaylistTrack et PlaylistMember garantit que la suppression d'un événement ou d'une playlist nettoie automatiquement tous les enregistrements associés.
 
-4. **Composite unique constraints**: `@@unique([trackId, userId])` on Vote and `@@unique([eventId, userId])` on EventMember prevent duplicates at the database level, as a safety net on top of application-level checks.
+4. **Contraintes d'unicité composites** : `@@unique([trackId, userId])` sur Vote et `@@unique([eventId, userId])` sur EventMember empêchent les doublons au niveau de la base de données, comme filet de sécurité en plus des vérifications applicatives.
 
-5. **No separate role table**: Roles are simple enums (`MemberRole`, `PlaylistLicense`) rather than a separate table. There are only 2-3 values each, so a join table would be over-engineering.
+5. **Pas de table de rôles séparée** : Les rôles sont de simples enums (`MemberRole`, `PlaylistLicense`) plutôt qu'une table séparée. Il n'y a que 2-3 valeurs chacun, donc une table de jointure serait du over-engineering.

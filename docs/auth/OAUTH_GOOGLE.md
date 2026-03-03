@@ -1,175 +1,186 @@
-# Google OAuth Flow — Music Room
+# Flux OAuth Google — Music Room
 
-## What is OAuth?
+## Qu'est-ce que OAuth ?
 
-OAuth is a way to let users log in with their Google account instead of creating a new password. The user clicks "Sign in with Google", gets redirected to Google's login page, and Google tells our backend "yes, this person is who they say they are". We never see or store the user's Google password.
+OAuth est un moyen de permettre aux utilisateurs de se connecter avec leur compte Google au lieu de créer un nouveau mot de passe. L'utilisateur clique sur "Se connecter avec Google", est redirigé vers la page de connexion Google, et Google dit à notre backend "oui, cette personne est bien celle qu'elle prétend être". On ne voit ni ne stocke jamais le mot de passe Google de l'utilisateur.
 
-## How it works — Mobile flow
+## Comment ça fonctionne — Flux mobile
 
-The mobile app uses a specific flow because it can't do browser redirects the same way a web app does. Instead of redirecting to Google, the mobile app opens a browser modal, gets a Google ID token, and sends it to our backend for verification.
+L'application mobile utilise un flux spécifique car elle ne peut pas faire de redirections navigateur de la même manière qu'une application web. Au lieu de rediriger vers Google, l'application mobile ouvre un navigateur modal, obtient un ID token Google, et l'envoie à notre backend pour vérification.
 
 ```
 ┌──────────┐         ┌──────────┐         ┌──────────┐         ┌──────────┐
-│  Mobile  │         │  Google  │         │ Backend  │         │ Database │
-│  App     │         │  OAuth   │         │          │         │          │
+│  App     │         │  Google  │         │ Backend  │         │ Base de  │
+│  Mobile  │         │  OAuth   │         │          │         │ données  │
 └────┬─────┘         └────┬─────┘         └────┬─────┘         └────┬─────┘
      │                     │                    │                    │
-     │  1. User taps       │                    │                    │
-     │  "Sign in with      │                    │                    │
-     │   Google"           │                    │                    │
+     │  1. L'utilisateur   │                    │                    │
+     │  appuie sur         │                    │                    │
+     │  "Se connecter      │                    │                    │
+     │   avec Google"      │                    │                    │
      │                     │                    │                    │
-     │  2. Open browser    │                    │                    │
-     │  modal with Google  │                    │                    │
-     │  login page         │                    │                    │
+     │  2. Ouvrir un       │                    │                    │
+     │  navigateur modal   │                    │                    │
+     │  avec la page de    │                    │                    │
+     │  connexion Google   │                    │                    │
      │────────────────────▶│                    │                    │
      │                     │                    │                    │
-     │  3. User enters     │                    │                    │
-     │  Google credentials │                    │                    │
-     │  (we never see      │                    │                    │
-     │   these)            │                    │                    │
+     │  3. L'utilisateur   │                    │                    │
+     │  entre ses          │                    │                    │
+     │  identifiants       │                    │                    │
+     │  Google (on ne les  │                    │                    │
+     │  voit jamais)       │                    │                    │
      │                     │                    │                    │
-     │  4. Google returns   │                    │                    │
-     │  an ID token        │                    │                    │
+     │  4. Google renvoie  │                    │                    │
+     │  un ID token        │                    │                    │
      │◀────────────────────│                    │                    │
      │                     │                    │                    │
      │  5. POST /api/auth/google/mobile         │                    │
      │  { idToken: "eyJ..." }                   │                    │
      │─────────────────────────────────────────▶│                    │
      │                     │                    │                    │
-     │                     │  6. Verify token   │                    │
-     │                     │  with Google API   │                    │
+     │                     │  6. Vérifier le    │                    │
+     │                     │  token auprès de   │                    │
+     │                     │  l'API Google      │                    │
      │                     │◀───────────────────│                    │
      │                     │───────────────────▶│                    │
      │                     │                    │                    │
-     │                     │                    │  7. Check: does    │
-     │                     │                    │  this Google ID    │
-     │                     │                    │  or email exist?   │
+     │                     │                    │  7. Vérifier : cet │
+     │                     │                    │  ID Google ou cet  │
+     │                     │                    │  email existe-t-il?│
      │                     │                    │───────────────────▶│
      │                     │                    │◀───────────────────│
      │                     │                    │                    │
-     │                     │                    │  8a. New user:     │
-     │                     │                    │  create account    │
-     │                     │                    │  8b. Existing email│
-     │                     │                    │  : link Google ID  │
-     │                     │                    │  8c. Known Google  │
-     │                     │                    │  ID: just login    │
+     │                     │                    │  8a. Nouvel         │
+     │                     │                    │  utilisateur :     │
+     │                     │                    │  créer le compte   │
+     │                     │                    │  8b. Email existant│
+     │                     │                    │  : lier le Google  │
+     │                     │                    │  ID                │
+     │                     │                    │  8c. Google ID     │
+     │                     │                    │  connu : simple    │
+     │                     │                    │  connexion         │
      │                     │                    │───────────────────▶│
      │                     │                    │                    │
-     │                     │                    │  9. Generate JWT   │
+     │                     │                    │  9. Générer les    │
+     │                     │                    │  tokens JWT        │
      │                     │                    │  access + refresh  │
-     │                     │                    │  tokens            │
      │                     │                    │                    │
      │  10. { user, accessToken, refreshToken } │                    │
      │◀─────────────────────────────────────────│                    │
      │                     │                    │                    │
-     │  11. Store tokens   │                    │                    │
-     │  in AsyncStorage    │                    │                    │
-     │  Navigate to Home   │                    │                    │
+     │  11. Stocker les    │                    │                    │
+     │  tokens dans        │                    │                    │
+     │  AsyncStorage       │                    │                    │
+     │  Naviguer vers      │                    │                    │
+     │  l'accueil          │                    │                    │
 ```
 
-## Step-by-step code walkthrough
+## Parcours du code étape par étape
 
-### Step 1-4: Mobile opens Google login
+### Étapes 1-4 : Le mobile ouvre la connexion Google
 
-**File**: `mobile/src/screens/LoginScreen.tsx`
+**Fichier** : `mobile/src/screens/LoginScreen.tsx`
 
-The mobile app uses `expo-auth-session` to open a Google login modal. This library handles the browser popup and captures the Google response:
+L'application mobile utilise `expo-auth-session` pour ouvrir un modal de connexion Google. Cette bibliothèque gère la popup navigateur et capture la réponse Google :
 
-1. The app opens a browser window to Google's OAuth consent screen
-2. The user logs in with their Google account
-3. Google redirects back to the app with an ID token
-4. The `expo-auth-session` library captures this token
+1. L'application ouvre une fenêtre navigateur vers l'écran de consentement OAuth de Google
+2. L'utilisateur se connecte avec son compte Google
+3. Google redirige vers l'application avec un ID token
+4. La bibliothèque `expo-auth-session` capture ce token
 
-The Google Client ID used here (`EXPO_PUBLIC_GOOGLE_CLIENT_ID`) must match the one configured in the Google Cloud Console.
+Le Google Client ID utilisé ici (`EXPO_PUBLIC_GOOGLE_CLIENT_ID`) doit correspondre à celui configuré dans la Google Cloud Console.
 
-### Step 5: Mobile sends token to backend
+### Étape 5 : Le mobile envoie le token au backend
 
-**File**: `mobile/src/screens/LoginScreen.tsx`
+**Fichier** : `mobile/src/screens/LoginScreen.tsx`
 
-After getting the Google ID token, the mobile app sends it to our backend:
+Après avoir obtenu l'ID token Google, l'application mobile l'envoie à notre backend :
 
 ```
 POST /api/auth/google/mobile
 { "idToken": "eyJhbGciOiJSUzI1NiIs..." }
 ```
 
-### Step 6: Backend verifies with Google
+### Étape 6 : Le backend vérifie auprès de Google
 
-**File**: `backend/src/services/auth.service.ts:195-238` — `googleMobileLogin()`
+**Fichier** : `backend/src/services/auth.service.ts:195-238` — `googleMobileLogin()`
 
-The backend calls Google's token verification API:
+Le backend appelle l'API de vérification de token de Google :
 
 ```
 GET https://oauth2.googleapis.com/tokeninfo?id_token=eyJ...
 ```
 
-Google responds with the decoded token payload:
+Google répond avec le payload du token décodé :
 ```json
 {
-  "sub": "109876543210",          // Google user ID
+  "sub": "109876543210",          // ID utilisateur Google
   "email": "user@gmail.com",
   "email_verified": "true",
   "name": "John Doe",
-  "aud": "123456789.apps.googleusercontent.com"  // Must match our client ID
+  "aud": "123456789.apps.googleusercontent.com"  // Doit correspondre à notre client ID
 }
 ```
 
-The backend performs two critical checks:
-1. **Audience check**: `payload.aud` must equal our `GOOGLE_CLIENT_ID`. This prevents tokens meant for other apps from being accepted.
-2. **Email verified**: Google must have confirmed the email belongs to this person.
+Le backend effectue deux vérifications critiques :
+1. **Vérification de l'audience** : `payload.aud` doit être égal à notre `GOOGLE_CLIENT_ID`. Cela empêche les tokens destinés à d'autres applications d'être acceptés.
+2. **Email vérifié** : Google doit avoir confirmé que l'email appartient bien à cette personne.
 
-### Steps 7-8: Find or create user
+### Étapes 7-8 : Trouver ou créer l'utilisateur
 
-**File**: `backend/src/services/auth.service.ts:212-232`
+**Fichier** : `backend/src/services/auth.service.ts:212-232`
 
-Three scenarios are handled:
+Trois scénarios sont gérés :
 
-| Scenario | What happens |
-|----------|--------------|
-| **Google ID already known** | User found by `googleId` → just login |
-| **Email exists but no Google ID** | User found by `email` → link Google ID to existing account, mark email as verified |
-| **Completely new user** | Create a new account with Google data (no password needed) |
+| Scénario | Ce qui se passe |
+|----------|----------------|
+| **Google ID déjà connu** | Utilisateur trouvé par `googleId` → simple connexion |
+| **Email existe mais pas de Google ID** | Utilisateur trouvé par `email` → lier le Google ID au compte existant, marquer l'email comme vérifié |
+| **Utilisateur complètement nouveau** | Créer un nouveau compte avec les données Google (pas de mot de passe nécessaire) |
 
-This logic ensures that if someone registered with email/password first and later tries Google OAuth with the same email, their accounts are merged rather than duplicated.
+Cette logique garantit que si quelqu'un s'est d'abord inscrit avec email/mot de passe puis essaie OAuth Google avec le même email, les comptes sont fusionnés plutôt que dupliqués.
 
-### Step 9-11: Generate tokens and respond
+### Étapes 9-11 : Générer les tokens et répondre
 
-Same as regular login: the backend generates a JWT access token (15min) and refresh token (7d), sends them to the mobile app, which stores them in AsyncStorage.
+Identique à une connexion classique : le backend génère un JWT access token (15min) et un refresh token (7j), les envoie à l'application mobile, qui les stocke dans AsyncStorage.
 
-## Web OAuth flow (Passport.js)
+## Flux OAuth web (Passport.js)
 
-There's also a traditional web OAuth flow using Passport.js for browser-based access:
+Il existe aussi un flux OAuth web traditionnel utilisant Passport.js pour l'accès navigateur :
 
 ```
-Browser                         Backend                     Google
+Navigateur                      Backend                     Google
   │                                │                           │
   │  GET /api/auth/google          │                           │
   │───────────────────────────────▶│                           │
-  │                                │  Redirect to Google       │
+  │                                │  Redirection vers Google  │
   │  302 Redirect                  │──────────────────────────▶│
   │◀───────────────────────────────│                           │
   │                                │                           │
-  │  User logs in on Google        │                           │
+  │  L'utilisateur se connecte     │                           │
+  │  sur Google                    │                           │
   │───────────────────────────────────────────────────────────▶│
   │                                │                           │
-  │                                │  Google callback with     │
-  │                                │  profile data             │
+  │                                │  Callback Google avec     │
+  │                                │  les données du profil    │
   │  GET /api/auth/google/callback │◀──────────────────────────│
   │───────────────────────────────▶│                           │
-  │                                │  Find/create user         │
-  │                                │  Generate JWT tokens      │
+  │                                │  Trouver/créer            │
+  │                                │  l'utilisateur            │
+  │                                │  Générer les tokens JWT   │
   │                                │                           │
-  │  Redirect with tokens          │                           │
+  │  Redirection avec les tokens   │                           │
   │◀───────────────────────────────│                           │
 ```
 
-**File**: `backend/src/config/passport.ts` — Passport.js Google Strategy configuration.
+**Fichier** : `backend/src/config/passport.ts` — Configuration de la stratégie Google pour Passport.js.
 
-The Passport strategy does the same user lookup logic (find by googleId or email, create if new). The main difference is that it's callback-based (Google redirects the browser back to `/api/auth/google/callback`).
+La stratégie Passport effectue la même logique de recherche d'utilisateur (trouver par googleId ou email, créer si nouveau). La principale différence est qu'elle fonctionne par callback (Google redirige le navigateur vers `/api/auth/google/callback`).
 
-## Linking Google to an existing account
+## Lier Google à un compte existant
 
-Users who registered with email/password can later link their Google account:
+Les utilisateurs qui se sont inscrits avec email/mot de passe peuvent ensuite lier leur compte Google :
 
 ```
 PUT /api/auth/link-google
@@ -177,16 +188,16 @@ Authorization: Bearer <token>
 { "googleId": "109876543210" }
 ```
 
-**File**: `backend/src/services/auth.service.ts:169-181` — `linkGoogle()`
+**Fichier** : `backend/src/services/auth.service.ts:169-181` — `linkGoogle()`
 
-This checks that the Google ID isn't already linked to another account (409 conflict), then updates the user's `googleId` field.
+Cela vérifie que le Google ID n'est pas déjà lié à un autre compte (conflit 409), puis met à jour le champ `googleId` de l'utilisateur.
 
-## Configuration required
+## Configuration requise
 
-| Variable | Where | Purpose |
+| Variable | Où | Objectif |
 |----------|-------|---------|
-| `GOOGLE_CLIENT_ID` | Backend `.env` | Identifies our app to Google |
-| `GOOGLE_CLIENT_SECRET` | Backend `.env` | Secret key for web OAuth callback |
-| `EXPO_PUBLIC_GOOGLE_CLIENT_ID` | Mobile `.env` | Same client ID for the mobile flow |
+| `GOOGLE_CLIENT_ID` | Backend `.env` | Identifie notre application auprès de Google |
+| `GOOGLE_CLIENT_SECRET` | Backend `.env` | Clé secrète pour le callback OAuth web |
+| `EXPO_PUBLIC_GOOGLE_CLIENT_ID` | Mobile `.env` | Même client ID pour le flux mobile |
 
-Both must point to the same Google Cloud project. The Google Cloud Console must have the OAuth consent screen configured with the correct redirect URIs.
+Les deux doivent pointer vers le même projet Google Cloud. La Google Cloud Console doit avoir l'écran de consentement OAuth configuré avec les URI de redirection correctes.

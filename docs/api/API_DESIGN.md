@@ -1,52 +1,52 @@
-# API Design — Music Room
+# Conception de l'API — Music Room
 
-## REST principles applied in this project
+## Principes REST appliqués dans ce projet
 
-REST (Representational State Transfer) is a set of conventions for designing web APIs. Here's how each principle is applied:
+REST (Representational State Transfer) est un ensemble de conventions pour concevoir des API web. Voici comment chaque principe est appliqué :
 
-### 1. Resources are nouns, not verbs
+### 1. Les ressources sont des noms, pas des verbes
 
-Each URL represents a "thing" (resource), not an action. The HTTP method (verb) tells the server what to do with it.
+Chaque URL représente une "chose" (ressource), pas une action. La méthode HTTP (verbe) indique au serveur quoi en faire.
 
 ```
-Good:  POST /api/events          (create an event)
-Bad:   POST /api/createEvent     (verb in URL)
+Bien :  POST /api/events          (créer un événement)
+Mal :   POST /api/createEvent     (verbe dans l'URL)
 
-Good:  GET /api/users/me         (get my profile)
-Bad:   GET /api/getMyProfile     (verb in URL)
+Bien :  GET /api/users/me         (obtenir mon profil)
+Mal :   GET /api/getMyProfile     (verbe dans l'URL)
 ```
 
-### 2. HTTP methods have meaning
+### 2. Les méthodes HTTP ont un sens
 
-| Method | Meaning | Example |
-|--------|---------|---------|
-| `GET` | Read a resource (no side effects) | `GET /api/events` — list events |
-| `POST` | Create a new resource | `POST /api/events` — create event |
-| `PUT` | Update an existing resource | `PUT /api/events/:id` — update event |
-| `DELETE` | Remove a resource | `DELETE /api/events/:id` — delete event |
+| Méthode | Signification | Exemple |
+|---------|---------------|---------|
+| `GET` | Lire une ressource (sans effets de bord) | `GET /api/events` — lister les événements |
+| `POST` | Créer une nouvelle ressource | `POST /api/events` — créer un événement |
+| `PUT` | Mettre à jour une ressource existante | `PUT /api/events/:id` — modifier un événement |
+| `DELETE` | Supprimer une ressource | `DELETE /api/events/:id` — supprimer un événement |
 
-### 3. Stateless
+### 3. Sans état (Stateless)
 
-Each request contains everything the server needs to process it (the JWT token in the header). The server doesn't store session state between requests.
+Chaque requête contient tout ce dont le serveur a besoin pour la traiter (le token JWT dans le header). Le serveur ne stocke pas d'état de session entre les requêtes.
 
-### 4. Consistent response format
+### 4. Format de réponse cohérent
 
-Every endpoint returns the same JSON structure:
+Chaque endpoint retourne la même structure JSON :
 
 ```json
-// Success
+// Succès
 {
   "success": true,
   "data": { ... }
 }
 
-// Error
+// Erreur
 {
   "success": false,
-  "error": "Error message"
+  "error": "Message d'erreur"
 }
 
-// Validation error
+// Erreur de validation
 {
   "success": false,
   "errors": [
@@ -55,168 +55,168 @@ Every endpoint returns the same JSON structure:
 }
 ```
 
-### 5. Meaningful HTTP status codes
+### 5. Codes de statut HTTP significatifs
 
-| Code | Meaning | When it's used |
-|------|---------|---------------|
-| `200` | OK | Successful read or update |
-| `201` | Created | Successful creation (POST) |
-| `204` | No Content | Successful delete (nothing to return) |
-| `400` | Bad Request | Validation error (Zod) or malformed input |
-| `401` | Unauthorized | Missing or invalid JWT token |
-| `403` | Forbidden | Authenticated but not allowed (not creator, not member, etc.) |
-| `404` | Not Found | Resource doesn't exist |
-| `409` | Conflict | Duplicate (email already taken, already a member) |
-| `429` | Too Many Requests | Rate limit exceeded |
-| `500` | Internal Server Error | Unexpected server error |
+| Code | Signification | Quand il est utilisé |
+|------|---------------|---------------------|
+| `200` | OK | Lecture ou mise à jour réussie |
+| `201` | Créé | Création réussie (POST) |
+| `204` | Pas de contenu | Suppression réussie (rien à retourner) |
+| `400` | Requête invalide | Erreur de validation (Zod) ou entrée malformée |
+| `401` | Non authentifié | Token JWT manquant ou invalide |
+| `403` | Interdit | Authentifié mais non autorisé (pas créateur, pas membre, etc.) |
+| `404` | Non trouvé | La ressource n'existe pas |
+| `409` | Conflit | Doublon (email déjà pris, déjà membre) |
+| `429` | Trop de requêtes | Limite de débit dépassée |
+| `500` | Erreur serveur interne | Erreur serveur inattendue |
 
-### Why JSON?
+### Pourquoi JSON ?
 
-JSON (JavaScript Object Notation) is the standard format for REST APIs because:
-- It's native to JavaScript/TypeScript (our entire stack)
-- It's human-readable and easy to debug
-- Every HTTP client and framework supports it natively
-- It's lightweight compared to XML
+JSON (JavaScript Object Notation) est le format standard pour les API REST car :
+- Il est natif en JavaScript/TypeScript (toute notre stack)
+- Il est lisible par l'humain et facile à débugger
+- Chaque client HTTP et framework le supporte nativement
+- Il est léger comparé au XML
 
 ---
 
-## Endpoint families
+## Familles d'endpoints
 
-### Authentication (`/api/auth`)
+### Authentification (`/api/auth`)
 
-Handles user registration, login, token refresh, email verification, password reset, and Google OAuth.
+Gère l'inscription, la connexion, le rafraîchissement de token, la vérification email, la réinitialisation de mot de passe et Google OAuth.
 
-| Method | Endpoint | Auth? | Purpose |
-|--------|----------|-------|---------|
-| `POST` | `/register` | No | Create account |
-| `POST` | `/login` | No | Login with email/password |
-| `POST` | `/refresh` | No | Get new token pair |
-| `POST` | `/verify-email` | No | Verify email with 6-digit code |
-| `POST` | `/forgot-password` | No | Request password reset |
-| `POST` | `/reset-password` | No | Reset password with token |
-| `PUT` | `/link-google` | Yes | Link Google account |
-| `GET` | `/google` | No | Start Google OAuth (web) |
-| `GET` | `/google/callback` | No | Google OAuth callback (web) |
-| `POST` | `/google/mobile` | No | Google OAuth (mobile ID token) |
+| Méthode | Endpoint | Auth ? | Objectif |
+|---------|----------|--------|----------|
+| `POST` | `/register` | Non | Créer un compte |
+| `POST` | `/login` | Non | Se connecter avec email/mot de passe |
+| `POST` | `/refresh` | Non | Obtenir une nouvelle paire de tokens |
+| `POST` | `/verify-email` | Non | Vérifier l'email avec un code à 6 chiffres |
+| `POST` | `/forgot-password` | Non | Demander une réinitialisation de mot de passe |
+| `POST` | `/reset-password` | Non | Réinitialiser le mot de passe avec un token |
+| `PUT` | `/link-google` | Oui | Lier un compte Google |
+| `GET` | `/google` | Non | Démarrer Google OAuth (web) |
+| `GET` | `/google/callback` | Non | Callback Google OAuth (web) |
+| `POST` | `/google/mobile` | Non | Google OAuth (ID token mobile) |
 
-**Rate limited**: `/register`, `/login`, `/forgot-password` (5 req/15min).
+**Limité en débit** : `/register`, `/login`, `/forgot-password` (5 req/15min).
 
-### Users (`/api/users`)
+### Utilisateurs (`/api/users`)
 
-Profile management, friend system, and user search.
+Gestion du profil, système d'amis et recherche d'utilisateurs.
 
-| Method | Endpoint | Auth? | Purpose |
-|--------|----------|-------|---------|
-| `GET` | `/me` | Yes | Get my profile |
-| `PUT` | `/me` | Yes | Update my profile |
-| `GET` | `/me/friends` | Yes | List my friends |
-| `PUT` | `/me/subscription` | Yes | Toggle premium |
-| `GET` | `/search?q=...` | Yes | Search users by name/email |
-| `GET` | `/friend-requests/pending` | Yes | List pending requests |
-| `POST` | `/friend-requests/:friendId` | Yes | Send friend request |
-| `PUT` | `/friend-requests/:friendId/accept` | Yes | Accept request |
-| `DELETE` | `/friend-requests/:friendId/reject` | Yes | Reject request |
-| `DELETE` | `/friends/:friendId` | Yes | Remove friend |
-| `GET` | `/:id` | Yes | View user profile (visibility rules) |
+| Méthode | Endpoint | Auth ? | Objectif |
+|---------|----------|--------|----------|
+| `GET` | `/me` | Oui | Obtenir mon profil |
+| `PUT` | `/me` | Oui | Modifier mon profil |
+| `GET` | `/me/friends` | Oui | Lister mes amis |
+| `PUT` | `/me/subscription` | Oui | Basculer le premium |
+| `GET` | `/search?q=...` | Oui | Chercher des utilisateurs par nom/email |
+| `GET` | `/friend-requests/pending` | Oui | Lister les demandes en attente |
+| `POST` | `/friend-requests/:friendId` | Oui | Envoyer une demande d'ami |
+| `PUT` | `/friend-requests/:friendId/accept` | Oui | Accepter une demande |
+| `DELETE` | `/friend-requests/:friendId/reject` | Oui | Rejeter une demande |
+| `DELETE` | `/friends/:friendId` | Oui | Supprimer un ami |
+| `GET` | `/:id` | Oui | Voir le profil d'un utilisateur (règles de visibilité) |
 
-### Events (`/api/events`)
+### Événements (`/api/events`)
 
-Music voting events — create, join, add tracks, vote.
+Événements de vote musical — créer, rejoindre, ajouter des morceaux, voter.
 
-| Method | Endpoint | Auth? | Purpose |
-|--------|----------|-------|---------|
-| `GET` | `/` | Yes | List public events |
-| `GET` | `/me` | Yes | List my events |
-| `GET` | `/invitations` | Yes | List pending invitations |
-| `POST` | `/` | Yes | Create event |
-| `GET` | `/:id` | Yes | Get event details |
-| `PUT` | `/:id` | Yes | Update event (creator only) |
-| `DELETE` | `/:id` | Yes | Delete event (creator only) |
-| `POST` | `/:id/join` | Yes | Join OPEN event |
-| `POST` | `/:id/accept` | Yes | Accept invitation |
-| `DELETE` | `/:id/reject` | Yes | Reject invitation |
-| `POST` | `/:id/invite` | Yes | Invite user (creator only) |
-| `GET` | `/:id/tracks` | Yes | List tracks (sorted by votes) |
-| `POST` | `/:id/tracks` | Yes | Add a track |
-| `POST` | `/:id/tracks/:trackId/vote` | Yes | Vote/unvote on a track |
+| Méthode | Endpoint | Auth ? | Objectif |
+|---------|----------|--------|----------|
+| `GET` | `/` | Oui | Lister les événements publics |
+| `GET` | `/me` | Oui | Lister mes événements |
+| `GET` | `/invitations` | Oui | Lister les invitations en attente |
+| `POST` | `/` | Oui | Créer un événement |
+| `GET` | `/:id` | Oui | Détails d'un événement |
+| `PUT` | `/:id` | Oui | Modifier un événement (créateur uniquement) |
+| `DELETE` | `/:id` | Oui | Supprimer un événement (créateur uniquement) |
+| `POST` | `/:id/join` | Oui | Rejoindre un événement OPEN |
+| `POST` | `/:id/accept` | Oui | Accepter une invitation |
+| `DELETE` | `/:id/reject` | Oui | Rejeter une invitation |
+| `POST` | `/:id/invite` | Oui | Inviter un utilisateur (créateur uniquement) |
+| `GET` | `/:id/tracks` | Oui | Lister les morceaux (triés par votes) |
+| `POST` | `/:id/tracks` | Oui | Ajouter un morceau |
+| `POST` | `/:id/tracks/:trackId/vote` | Oui | Voter/retirer son vote sur un morceau |
 
 ### Playlists (`/api/playlists`)
 
-Collaborative playlists — create, edit, reorder, invite.
+Playlists collaboratives — créer, éditer, réordonner, inviter.
 
-| Method | Endpoint | Auth? | Premium? | Purpose |
-|--------|----------|-------|----------|---------|
-| `GET` | `/` | Yes | No | List public playlists |
-| `GET` | `/me` | Yes | No | List my playlists |
-| `GET` | `/invitations` | Yes | No | List pending invitations |
-| `POST` | `/` | Yes | Yes | Create playlist |
-| `GET` | `/:id` | Yes | No | Get playlist details |
-| `PUT` | `/:id` | Yes | No | Update playlist (creator only) |
-| `DELETE` | `/:id` | Yes | No | Delete playlist (creator only) |
-| `GET` | `/:id/tracks` | Yes | No | List tracks (sorted by position) |
-| `POST` | `/:id/tracks` | Yes | Yes | Add track |
-| `DELETE` | `/:id/tracks/:trackId` | Yes | Yes | Remove track |
-| `PUT` | `/:id/tracks/:trackId/position` | Yes | Yes | Reorder track |
-| `POST` | `/:id/invite` | Yes | No | Invite user |
-| `POST` | `/:id/accept` | Yes | No | Accept invitation |
-| `DELETE` | `/:id/reject` | Yes | No | Reject invitation |
+| Méthode | Endpoint | Auth ? | Premium ? | Objectif |
+|---------|----------|--------|-----------|----------|
+| `GET` | `/` | Oui | Non | Lister les playlists publiques |
+| `GET` | `/me` | Oui | Non | Lister mes playlists |
+| `GET` | `/invitations` | Oui | Non | Lister les invitations en attente |
+| `POST` | `/` | Oui | Oui | Créer une playlist |
+| `GET` | `/:id` | Oui | Non | Détails d'une playlist |
+| `PUT` | `/:id` | Oui | Non | Modifier une playlist (créateur uniquement) |
+| `DELETE` | `/:id` | Oui | Non | Supprimer une playlist (créateur uniquement) |
+| `GET` | `/:id/tracks` | Oui | Non | Lister les morceaux (triés par position) |
+| `POST` | `/:id/tracks` | Oui | Oui | Ajouter un morceau |
+| `DELETE` | `/:id/tracks/:trackId` | Oui | Oui | Supprimer un morceau |
+| `PUT` | `/:id/tracks/:trackId/position` | Oui | Oui | Réordonner un morceau |
+| `POST` | `/:id/invite` | Oui | Non | Inviter un utilisateur |
+| `POST` | `/:id/accept` | Oui | Non | Accepter une invitation |
+| `DELETE` | `/:id/reject` | Oui | Non | Rejeter une invitation |
 
-### Other endpoints
+### Autres endpoints
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `GET` | `/health` | Health check (no auth) |
-| `GET` | `/api/docs` | Swagger UI documentation |
+| Méthode | Endpoint | Objectif |
+|---------|----------|----------|
+| `GET` | `/health` | Vérification de santé (pas d'auth) |
+| `GET` | `/api/docs` | Documentation Swagger UI |
 | `GET` | `/api/config/features` | Feature flags (premiumEnabled) |
 
 ---
 
-## Swagger documentation
+## Documentation Swagger
 
-The API is fully documented with Swagger/OpenAPI annotations. Interactive documentation is available at:
+L'API est entièrement documentée avec des annotations Swagger/OpenAPI. La documentation interactive est disponible à :
 
 ```
 http://localhost:3001/api/docs
 ```
 
-**How it works**:
-- Each route file contains JSDoc-style Swagger annotations (`@swagger`)
-- `swagger-jsdoc` extracts these annotations and generates an OpenAPI specification
-- `swagger-ui-express` serves an interactive web page where you can browse and test endpoints
+**Comment ça fonctionne** :
+- Chaque fichier de routes contient des annotations Swagger au format JSDoc (`@swagger`)
+- `swagger-jsdoc` extrait ces annotations et génère une spécification OpenAPI
+- `swagger-ui-express` sert une page web interactive où on peut parcourir et tester les endpoints
 
-**Files**:
-- `backend/src/config/swagger.ts` — Swagger configuration
-- `backend/src/routes/*.routes.ts` — Swagger annotations on each route
+**Fichiers** :
+- `backend/src/config/swagger.ts` — Configuration Swagger
+- `backend/src/routes/*.routes.ts` — Annotations Swagger sur chaque route
 
-**How to read the Swagger docs**:
-1. Start the backend (`make dev`)
-2. Open `http://localhost:3001/api/docs` in a browser
-3. Each endpoint shows: HTTP method, URL, required parameters, request body schema, possible responses
-4. Click "Try it out" to send a test request directly from the browser
-5. Add your JWT token in the "Authorize" button to test authenticated endpoints
+**Comment lire la documentation Swagger** :
+1. Démarrer le backend (`make dev`)
+2. Ouvrir `http://localhost:3001/api/docs` dans un navigateur
+3. Chaque endpoint affiche : méthode HTTP, URL, paramètres requis, schéma du corps de requête, réponses possibles
+4. Cliquer sur "Try it out" pour envoyer une requête de test directement depuis le navigateur
+5. Ajouter votre token JWT dans le bouton "Authorize" pour tester les endpoints authentifiés
 
 ---
 
-## Route file structure
+## Structure des fichiers de routes
 
-Each route file follows the same pattern:
+Chaque fichier de routes suit le même pattern :
 
 ```
 backend/src/routes/
-├── auth.routes.ts       ← 271 lines (routes + Swagger annotations)
-├── user.routes.ts       ← 247 lines
-├── event.routes.ts      ← 377 lines
-└── playlist.routes.ts   ← 378 lines
+├── auth.routes.ts       ← 271 lignes (routes + annotations Swagger)
+├── user.routes.ts       ← 247 lignes
+├── event.routes.ts      ← 377 lignes
+└── playlist.routes.ts   ← 378 lignes
 ```
 
-A typical route definition:
+Une définition de route typique :
 
 ```typescript
 /**
  * @swagger
  * /api/events:
  *   post:
- *     summary: Create a new event
+ *     summary: Créer un nouvel événement
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -228,4 +228,4 @@ A typical route definition:
 router.post('/', authenticate, validate(createEventSchema), createEvent);
 ```
 
-The middleware chain is: `authenticate` (JWT) → `validate` (Zod schema) → controller function.
+La chaîne de middlewares est : `authenticate` (JWT) → `validate` (schéma Zod) → fonction contrôleur.

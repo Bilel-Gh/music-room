@@ -1,101 +1,101 @@
-# Security — Music Room
+# Sécurité — Music Room
 
-This document lists all security measures implemented in the project, what they protect against, and where they are in the code.
+Ce document liste toutes les mesures de sécurité implémentées dans le projet, ce contre quoi elles protègent, et où elles se trouvent dans le code.
 
-## Security measures overview
+## Vue d'ensemble des mesures de sécurité
 
 ```
-Client Request
+Requête client
      │
      ▼
 ┌─────────────┐
-│   helmet     │  ← HTTP security headers (XSS, clickjacking, MIME sniffing)
+│   helmet     │  ← Headers de sécurité HTTP (XSS, clickjacking, MIME sniffing)
 ├─────────────┤
-│   cors       │  ← Cross-origin access control
+│   cors       │  ← Contrôle d'accès cross-origin
 ├─────────────┤
-│ rate-limit   │  ← Brute-force protection (global + auth-specific)
+│ rate-limit   │  ← Protection contre le brute-force (global + spécifique auth)
 ├─────────────┤
-│   JWT auth   │  ← Identity verification on every request
+│   JWT auth   │  ← Vérification d'identité à chaque requête
 ├─────────────┤
-│ Zod validate │  ← Input validation (type, format, length)
+│ Zod validate │  ← Validation des entrées (type, format, longueur)
 ├─────────────┤
-│  controller  │  ← Access control (ownership, membership, permissions)
+│  contrôleur  │  ← Contrôle d'accès (propriété, appartenance, permissions)
 ├─────────────┤
-│   Prisma     │  ← Parameterized queries (SQL injection prevention)
+│   Prisma     │  ← Requêtes paramétrées (prévention injection SQL)
 ├─────────────┤
-│  bcrypt      │  ← Password hashing (brute-force resistant)
+│  bcrypt      │  ← Hashage des mots de passe (résistant au brute-force)
 ├─────────────┤
-│  winston     │  ← Action logging (audit trail)
+│  winston     │  ← Journalisation des actions (piste d'audit)
 └─────────────┘
 ```
 
 ---
 
-## 1. Helmet — HTTP Security Headers
+## 1. Helmet — Headers de sécurité HTTP
 
-**What it is**: A middleware that sets HTTP response headers to prevent common web attacks.
+**Ce que c'est** : Un middleware qui définit des headers de réponse HTTP pour prévenir les attaques web courantes.
 
-**What it protects against**:
-- **XSS (Cross-Site Scripting)**: `Content-Security-Policy` header restricts what scripts can run
-- **Clickjacking**: `X-Frame-Options` prevents the app from being embedded in iframes
-- **MIME sniffing**: `X-Content-Type-Options: nosniff` prevents browsers from interpreting files as a different MIME type
-- **Protocol downgrade**: `Strict-Transport-Security` (HSTS) forces HTTPS
+**Ce contre quoi ça protège** :
+- **XSS (Cross-Site Scripting)** : Le header `Content-Security-Policy` restreint quels scripts peuvent s'exécuter
+- **Clickjacking** : `X-Frame-Options` empêche l'application d'être intégrée dans des iframes
+- **MIME sniffing** : `X-Content-Type-Options: nosniff` empêche les navigateurs d'interpréter les fichiers comme un type MIME différent
+- **Rétrogradation de protocole** : `Strict-Transport-Security` (HSTS) force l'utilisation du HTTPS
 
-**Where**: `backend/src/app.ts:19`
+**Où** : `backend/src/app.ts:19`
 ```typescript
 app.use(helmet());
 ```
 
-One line, 11 security headers. Helmet uses sensible defaults — no configuration needed for our case.
+Une ligne, 11 headers de sécurité. Helmet utilise des valeurs par défaut sensées — aucune configuration nécessaire pour notre cas.
 
 ---
 
 ## 2. CORS — Cross-Origin Resource Sharing
 
-**What it is**: Controls which domains can make requests to our API.
+**Ce que c'est** : Contrôle quels domaines peuvent faire des requêtes à notre API.
 
-**What it protects against**: Prevents unauthorized websites from making API calls on behalf of a user (cross-origin attacks).
+**Ce contre quoi ça protège** : Empêche des sites web non autorisés de faire des appels API au nom d'un utilisateur (attaques cross-origin).
 
-**Where**: `backend/src/app.ts:18`
+**Où** : `backend/src/app.ts:18`
 ```typescript
 app.use(cors());
 ```
 
-Currently configured to allow all origins (`*`) since the mobile app and development tools need access. In production, this should be restricted to specific domains.
+Actuellement configuré pour autoriser toutes les origines (`*`) puisque l'application mobile et les outils de développement ont besoin d'accès. En production, cela devrait être restreint à des domaines spécifiques.
 
 ---
 
-## 3. Rate Limiting
+## 3. Limitation de débit (Rate Limiting)
 
-**What it is**: Limits the number of requests a single IP address can make in a time window.
+**Ce que c'est** : Limite le nombre de requêtes qu'une seule adresse IP peut faire dans une fenêtre de temps.
 
-**What it protects against**: Brute-force attacks on login/registration, and API abuse.
+**Ce contre quoi ça protège** : Attaques par brute-force sur login/inscription, et abus de l'API.
 
-**Where**: `backend/src/config/rate-limit.ts`
+**Où** : `backend/src/config/rate-limit.ts`
 
-### Two levels of rate limiting:
+### Deux niveaux de limitation de débit :
 
-| Limiter | Scope | Limit | Window | Applied to |
-|---------|-------|-------|--------|-----------|
-| `globalLimiter` | All routes | 200 requests | 15 minutes | `backend/src/app.ts:20` |
-| `authLimiter` | Auth routes only | 5 requests | 15 minutes | `backend/src/routes/auth.routes.ts` (on login, register, forgot-password) |
+| Limiteur | Portée | Limite | Fenêtre | Appliqué à |
+|----------|--------|--------|---------|-----------|
+| `globalLimiter` | Toutes les routes | 200 requêtes | 15 minutes | `backend/src/app.ts:20` |
+| `authLimiter` | Routes auth uniquement | 5 requêtes | 15 minutes | `backend/src/routes/auth.routes.ts` (sur login, register, forgot-password) |
 
-**Example attack prevented**: An attacker trying to guess passwords can only attempt 5 logins every 15 minutes per IP. After that, they get a 429 response:
+**Exemple d'attaque prévenue** : Un attaquant essayant de deviner des mots de passe ne peut tenter que 5 connexions toutes les 15 minutes par IP. Après ça, il reçoit une réponse 429 :
 ```json
 { "success": false, "error": "Too many requests, please try again later" }
 ```
 
-Both limiters are disabled during tests (`NODE_ENV=test`) to avoid flaky test results.
+Les deux limiteurs sont désactivés pendant les tests (`NODE_ENV=test`) pour éviter des résultats de tests instables.
 
 ---
 
-## 4. JWT Authentication
+## 4. Authentification JWT
 
-**What it is**: JSON Web Tokens verify user identity on every API request.
+**Ce que c'est** : Les JSON Web Tokens vérifient l'identité de l'utilisateur à chaque requête API.
 
-**What it protects against**: Unauthorized access to protected resources.
+**Ce contre quoi ça protège** : Accès non autorisé aux ressources protégées.
 
-**Where**: `backend/src/middleware/auth.middleware.ts`
+**Où** : `backend/src/middleware/auth.middleware.ts`
 
 ```typescript
 export function authenticate(req, res, next) {
@@ -115,50 +115,50 @@ export function authenticate(req, res, next) {
 }
 ```
 
-**Security details**:
-- Access tokens expire after **15 minutes** (short-lived to minimize damage if stolen)
-- Refresh tokens expire after **7 days**
-- Two separate secrets: `JWT_SECRET` and `JWT_REFRESH_SECRET`
-- Token is always in the `Authorization` header, never in URL parameters (prevents leakage in logs)
+**Détails de sécurité** :
+- Les access tokens expirent après **15 minutes** (durée courte pour minimiser les dégâts en cas de vol)
+- Les refresh tokens expirent après **7 jours**
+- Deux secrets séparés : `JWT_SECRET` et `JWT_REFRESH_SECRET`
+- Le token est toujours dans le header `Authorization`, jamais dans les paramètres d'URL (empêche la fuite dans les logs)
 
-See `docs/auth/JWT_FLOW.md` for the complete authentication flow.
+Voir `docs/auth/JWT_FLOW.md` pour le flux d'authentification complet.
 
 ---
 
-## 5. Password Hashing (bcrypt)
+## 5. Hashage des mots de passe (bcrypt)
 
-**What it is**: Passwords are hashed with bcrypt before storage. The original password is never stored or retrievable.
+**Ce que c'est** : Les mots de passe sont hashés avec bcrypt avant stockage. Le mot de passe original n'est jamais stocké ni récupérable.
 
-**What it protects against**: Even if the database is leaked, attackers can't recover passwords.
+**Ce contre quoi ça protège** : Même si la base de données fuite, les attaquants ne peuvent pas retrouver les mots de passe.
 
-**Where**: `backend/src/services/auth.service.ts:32` (registration) and `auth.service.ts:64` (login)
+**Où** : `backend/src/services/auth.service.ts:32` (inscription) et `auth.service.ts:64` (connexion)
 
 ```typescript
-// Registration: hash the password
+// Inscription : hasher le mot de passe
 const hashedPassword = await bcrypt.hash(data.password, 10);
 
-// Login: compare submitted password with hash
+// Connexion : comparer le mot de passe soumis avec le hash
 const valid = await bcrypt.compare(password, user.password);
 ```
 
-**Why bcrypt with 10 rounds**: Each round doubles the computation time. 10 rounds means ~100ms per hash — fast enough for users, slow enough to make brute-force impractical. An attacker trying to crack a bcrypt hash would need ~100ms per attempt, making dictionary attacks extremely slow.
+**Pourquoi bcrypt avec 10 tours** : Chaque tour double le temps de calcul. 10 tours signifie ~100ms par hash — assez rapide pour les utilisateurs, assez lent pour rendre le brute-force impraticable. Un attaquant essayant de craquer un hash bcrypt aurait besoin de ~100ms par tentative, rendant les attaques par dictionnaire extrêmement lentes.
 
 ---
 
-## 6. Input Validation (Zod)
+## 6. Validation des entrées (Zod)
 
-**What it is**: Every API input is validated against a Zod schema before reaching the controller. Invalid requests are rejected with a 400 error.
+**Ce que c'est** : Chaque entrée API est validée par un schéma Zod avant d'atteindre le contrôleur. Les requêtes invalides sont rejetées avec une erreur 400.
 
-**What it protects against**:
-- **SQL injection**: No raw strings reach the database (Prisma parameterizes + Zod validates)
-- **Type confusion**: A string where a number is expected is caught before it can cause errors
-- **Oversized inputs**: Length limits prevent abuse (e.g., password must be >= 8 characters)
-- **Format enforcement**: Email must be valid email format, UUIDs must be valid UUIDs
+**Ce contre quoi ça protège** :
+- **Injection SQL** : Aucune chaîne brute n'atteint la base de données (Prisma paramétrise + Zod valide)
+- **Confusion de types** : Une chaîne où un nombre est attendu est détectée avant de pouvoir causer des erreurs
+- **Entrées surdimensionnées** : Les limites de longueur empêchent les abus (ex. mot de passe >= 8 caractères)
+- **Application du format** : L'email doit être au format email valide, les UUID doivent être des UUID valides
 
-**Where**: `backend/src/middleware/validate.middleware.ts` + `backend/src/schemas/` folder
+**Où** : `backend/src/middleware/validate.middleware.ts` + dossier `backend/src/schemas/`
 
 ```typescript
-// Example: register schema
+// Exemple : schéma d'inscription
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -166,7 +166,7 @@ export const registerSchema = z.object({
 });
 ```
 
-**Error response format**:
+**Format de réponse d'erreur** :
 ```json
 {
   "success": false,
@@ -177,142 +177,142 @@ export const registerSchema = z.object({
 }
 ```
 
-**Validated routes**:
-- `POST /auth/register` — email, password (>=8), name (>=2)
-- `POST /auth/login` — email, password
+**Routes validées** :
+- `POST /auth/register` — email, mot de passe (>=8), nom (>=2)
+- `POST /auth/login` — email, mot de passe
 - `POST /auth/refresh` — refreshToken
-- `POST /auth/verify-email` — email, code (6 digits)
+- `POST /auth/verify-email` — email, code (6 chiffres)
 - `POST /auth/forgot-password` — email
-- `POST /auth/reset-password` — token, password (>=8)
+- `POST /auth/reset-password` — token, mot de passe (>=8)
 - `PUT /users/me` — name, publicInfo, friendsInfo, privateInfo, musicPreferences
-- `POST /events` — name (>=2), description, isPublic, licenseType, time/location
+- `POST /events` — nom (>=2), description, isPublic, licenseType, heure/localisation
 - `POST /events/:id/tracks` — title, artist, externalUrl, location
 - `POST /events/:id/tracks/:trackId/vote` — latitude, longitude
-- `POST /playlists` — name (>=2), description, isPublic, licenseType
+- `POST /playlists` — nom (>=2), description, isPublic, licenseType
 - `POST /playlists/:id/tracks` — title, artist, externalUrl
-- `PUT /playlists/:id/tracks/:trackId/position` — newPosition (integer >= 0)
+- `PUT /playlists/:id/tracks/:trackId/position` — newPosition (entier >= 0)
 - `POST /events/:id/invite` — userId (UUID)
-- `POST /playlists/:id/invite` — userId (UUID), canEdit (boolean)
+- `POST /playlists/:id/invite` — userId (UUID), canEdit (booléen)
 
 ---
 
-## 7. Access Control
+## 7. Contrôle d'accès
 
-**What it is**: Beyond authentication (who are you?), access control checks authorization (what can you do?).
+**Ce que c'est** : Au-delà de l'authentification (qui êtes-vous ?), le contrôle d'accès vérifie l'autorisation (que pouvez-vous faire ?).
 
-**What it protects against**: Users accessing or modifying resources they shouldn't.
+**Ce contre quoi ça protège** : Les utilisateurs qui accèdent ou modifient des ressources qu'ils ne devraient pas.
 
-**Where**: Various service files
+**Où** : Différents fichiers de services
 
-| Check | Where | What it does |
-|-------|-------|-------------|
-| Event creator only | `event.service.ts:119,139` | Only the creator can update/delete an event |
-| Playlist creator only | `playlist.service.ts:116,129` | Only the creator can update/delete a playlist |
-| Invite-only events | `event.service.ts:159` | Can't join INVITE_ONLY events without invitation |
-| Playlist edit permission | `playlist.service.ts:31-48` | INVITE_ONLY playlists: must be accepted member with `canEdit=true` |
-| Playlist view permission | `playlist.service.ts:10-28` | Private playlists: only accepted members can view |
-| Profile visibility | `user.service.ts` | Three visibility levels: public, friends-only, private |
-| Event membership | `vote.service.ts:36-42` | INVITE_ONLY events: must be member to vote |
-| Location/time gating | `vote.service.ts:44-63` | LOCATION_TIME events: must be within 5km + time window |
-| Premium feature gate | `middleware/premium.middleware.ts` | Playlist creation gated behind premium when enabled |
+| Vérification | Où | Ce que ça fait |
+|-------------|-------|-------------|
+| Créateur d'événement uniquement | `event.service.ts:119,139` | Seul le créateur peut modifier/supprimer un événement |
+| Créateur de playlist uniquement | `playlist.service.ts:116,129` | Seul le créateur peut modifier/supprimer une playlist |
+| Événements sur invitation | `event.service.ts:159` | Impossible de rejoindre un événement INVITE_ONLY sans invitation |
+| Permission d'édition playlist | `playlist.service.ts:31-48` | Playlists INVITE_ONLY : doit être membre accepté avec `canEdit=true` |
+| Permission de vue playlist | `playlist.service.ts:10-28` | Playlists privées : seuls les membres acceptés peuvent voir |
+| Visibilité du profil | `user.service.ts` | Trois niveaux de visibilité : public, amis uniquement, privé |
+| Appartenance à l'événement | `vote.service.ts:36-42` | Événements INVITE_ONLY : doit être membre pour voter |
+| Contrôle localisation/temps | `vote.service.ts:44-63` | Événements LOCATION_TIME : doit être dans un rayon de 5 km + fenêtre temporelle |
+| Fonctionnalité premium | `middleware/premium.middleware.ts` | Création de playlist derrière le paywall premium quand activé |
 
 ---
 
-## 8. SQL Injection Prevention
+## 8. Prévention de l'injection SQL
 
-**What it is**: Prisma ORM uses parameterized queries, which means user input is never concatenated directly into SQL strings.
+**Ce que c'est** : L'ORM Prisma utilise des requêtes paramétrées, ce qui signifie que les entrées utilisateur ne sont jamais concaténées directement dans les chaînes SQL.
 
-**What it protects against**: SQL injection — where an attacker submits `'; DROP TABLE users; --` as input.
+**Ce contre quoi ça protège** : L'injection SQL — où un attaquant soumet `'; DROP TABLE users; --` en entrée.
 
-**Where**: Implicit in all Prisma calls throughout the codebase.
+**Où** : Implicite dans tous les appels Prisma dans le codebase.
 
 ```typescript
-// What we write:
+// Ce qu'on écrit :
 await prisma.user.findUnique({ where: { email } });
 
-// What Prisma generates (parameterized):
-// SELECT * FROM "User" WHERE "email" = $1  (with $1 = email value)
+// Ce que Prisma génère (paramétré) :
+// SELECT * FROM "User" WHERE "email" = $1  (avec $1 = valeur de l'email)
 
-// NOT this (vulnerable):
+// PAS ceci (vulnérable) :
 // SELECT * FROM "User" WHERE "email" = '${email}'
 ```
 
-Combined with Zod validation (which ensures proper types before they reach Prisma), SQL injection is effectively impossible in this codebase.
+Combiné avec la validation Zod (qui assure les types corrects avant qu'ils n'atteignent Prisma), l'injection SQL est effectivement impossible dans ce codebase.
 
 ---
 
-## 9. Action Logging (Winston)
+## 9. Journalisation des actions (Winston)
 
-**What it is**: Every API request is logged with metadata about the user, platform, and device.
+**Ce que c'est** : Chaque requête API est journalisée avec des métadonnées sur l'utilisateur, la plateforme et l'appareil.
 
-**What it protects against**: Provides an audit trail for investigating security incidents.
+**Ce contre quoi ça protège** : Fournit une piste d'audit pour investiguer les incidents de sécurité.
 
-**Where**: `backend/src/config/logger.ts` (logger setup) + `backend/src/middleware/logger.middleware.ts` (request logging)
+**Où** : `backend/src/config/logger.ts` (configuration du logger) + `backend/src/middleware/logger.middleware.ts` (journalisation des requêtes)
 
-**Log format**:
+**Format du log** :
 ```
 2024-03-01 14:30:00 [INFO] POST /api/events | user=abc-123 | platform=ios | device=iPhone 15 | version=1.0.0
 ```
 
-**Log storage**:
-- Console output (development)
-- File: `backend/logs/app.log` (max 5MB, rotated, 3 files kept)
+**Stockage des logs** :
+- Sortie console (développement)
+- Fichier : `backend/logs/app.log` (max 5Mo, rotation, 3 fichiers conservés)
 
-The mobile app sends platform, device, and app version on every request via custom headers:
-- `X-Platform`: ios, android, web
-- `X-Device`: device model name
-- `X-App-Version`: app version from `app.json`
+L'application mobile envoie la plateforme, l'appareil et la version de l'app à chaque requête via des headers personnalisés :
+- `X-Platform` : ios, android, web
+- `X-Device` : nom du modèle de l'appareil
+- `X-App-Version` : version de l'app depuis `app.json`
 
-**File**: `mobile/src/services/api.ts:20-23` — Axios interceptor adds these headers.
+**Fichier** : `mobile/src/services/api.ts:20-23` — L'intercepteur Axios ajoute ces headers.
 
 ---
 
-## 10. Sensitive Data Protection
+## 10. Protection des données sensibles
 
-### Environment variables
-All secrets are stored in `.env` files and never committed to git:
+### Variables d'environnement
+Tous les secrets sont stockés dans des fichiers `.env` et jamais committés dans git :
 - `JWT_SECRET`, `JWT_REFRESH_SECRET`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `DATABASE_URL`, `DIRECT_URL`
 
-The `.env.example` files contain empty values as templates.
+Les fichiers `.env.example` contiennent des valeurs vides comme modèles.
 
-### Password reset token security
-- Token is a 32-byte cryptographically random hex string (`crypto.randomBytes(32)`)
-- Expires after 30 minutes
-- Cleared from database immediately after use
-- `forgotPassword()` returns the same message whether the email exists or not (prevents email enumeration)
+### Sécurité du token de réinitialisation de mot de passe
+- Le token est une chaîne hexadécimale aléatoire cryptographiquement sécurisée de 32 octets (`crypto.randomBytes(32)`)
+- Expire après 30 minutes
+- Effacé de la base de données immédiatement après utilisation
+- `forgotPassword()` retourne le même message que l'email existe ou non (empêche l'énumération d'emails)
 
-### Email verification code security
-- 6-digit random code
-- Expires after 15 minutes
-- Cleared from database after successful verification
+### Sécurité du code de vérification email
+- Code aléatoire à 6 chiffres
+- Expire après 15 minutes
+- Effacé de la base de données après vérification réussie
 
 ---
 
-## Identified threats and mitigations
+## Menaces identifiées et atténuations
 
-### Implemented
+### Implémentées
 
-| Threat | Mitigation | Status |
-|--------|------------|--------|
-| Brute-force login | Rate limiting (5 req/15min on auth routes) | Implemented |
-| Stolen JWT | Short expiry (15min access token) | Implemented |
-| Password leak | bcrypt hashing (10 rounds) | Implemented |
-| XSS | Helmet security headers | Implemented |
-| Clickjacking | X-Frame-Options via Helmet | Implemented |
-| SQL injection | Prisma parameterized queries + Zod validation | Implemented |
-| Invalid input | Zod schemas on all routes | Implemented |
-| Unauthorized access | JWT middleware + access control checks | Implemented |
-| CSRF | Not applicable (API uses Bearer tokens, not cookies) | N/A |
+| Menace | Atténuation | Statut |
+|--------|-------------|--------|
+| Brute-force sur login | Limitation de débit (5 req/15min sur les routes auth) | Implémenté |
+| JWT volé | Expiration courte (access token de 15min) | Implémenté |
+| Fuite de mots de passe | Hashage bcrypt (10 tours) | Implémenté |
+| XSS | Headers de sécurité Helmet | Implémenté |
+| Clickjacking | X-Frame-Options via Helmet | Implémenté |
+| Injection SQL | Requêtes paramétrées Prisma + validation Zod | Implémenté |
+| Entrées invalides | Schémas Zod sur toutes les routes | Implémenté |
+| Accès non autorisé | Middleware JWT + vérifications de contrôle d'accès | Implémenté |
+| CSRF | Non applicable (l'API utilise des Bearer tokens, pas des cookies) | N/A |
 
-### Not implemented (possible improvements)
+### Non implémentées (améliorations possibles)
 
-| Threat | Possible mitigation | Why not implemented |
-|--------|--------------------|--------------------|
-| Token theft via device access | Encrypted token storage (Expo SecureStore) | AsyncStorage is sufficient for this scope |
-| Refresh token reuse | Token blacklist / rotation with DB storage | Would add complexity; current approach is acceptable |
-| DDoS | Cloud-level WAF (Cloudflare, AWS Shield) | Infrastructure-level concern, not application-level |
-| Account takeover via email | 2FA (TOTP/SMS) | Beyond project scope |
-| API key leakage | API key rotation + vault (HashiCorp Vault) | Only one API (Google), managed via env variables |
-| Session fixation | Not applicable (stateless JWT, no server sessions) | N/A |
+| Menace | Atténuation possible | Pourquoi non implémentée |
+|--------|---------------------|--------------------------|
+| Vol de token via accès à l'appareil | Stockage chiffré des tokens (Expo SecureStore) | AsyncStorage est suffisant pour cette portée |
+| Réutilisation du refresh token | Liste noire de tokens / rotation avec stockage en BDD | Ajouterait de la complexité ; l'approche actuelle est acceptable |
+| DDoS | WAF cloud (Cloudflare, AWS Shield) | Préoccupation au niveau infrastructure, pas applicatif |
+| Prise de contrôle de compte via email | 2FA (TOTP/SMS) | Hors périmètre du projet |
+| Fuite de clé API | Rotation de clé API + coffre-fort (HashiCorp Vault) | Une seule API (Google), gérée via variables d'environnement |
+| Fixation de session | Non applicable (JWT stateless, pas de sessions serveur) | N/A |
