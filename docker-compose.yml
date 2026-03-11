@@ -1,0 +1,8 @@
+services:
+  music-room:
+    image: node:latest
+    volumes:
+      - ./:/src/
+    ports:
+      - 0.0.0.0:3001:3001
+    command: bash -c "cd /src/ && make install db-migrate dev"
