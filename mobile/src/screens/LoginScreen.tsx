@@ -51,8 +51,11 @@ export default function LoginScreen({ navigation }: Props) {
     }
   };
 
+  const redirectUri = 'https://auth.expo.io/@anonymous/mobile';
+
   const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    redirectUri,
   });
 
   useEffect(() => {
