@@ -1,0 +1,19 @@
+services:
+  backend:
+    container_name: backend
+    image: node:latest
+    volumes:
+      - ./:/src/
+    ports:
+      - 0.0.0.0:3001:3001
+    command: bash -c "cd /src/ && make install dev"
+
+  frontend:
+    container_name: frontend
+    image: node:latest
+    volumes:
+      - ./:/src/
+    ports:
+      - 0.0.0.0:8081:8081
+    command: bash -c "cd /src/ && make install dev-mobile"
+    
