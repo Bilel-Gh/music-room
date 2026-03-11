@@ -11,6 +11,7 @@ services:
     command: bash -c "cd /src/ && make install dev"
     networks:
     - local
+    restart: always
 
   frontend:
     container_name: frontend
@@ -22,6 +23,7 @@ services:
     command: bash -c "cd /src/ && make install dev-mobile"
     networks:
     - local
+    restart: always
 
   nginx:
     container_name: nginx
@@ -35,3 +37,22 @@ services:
     depends_on:
       - frontend
       - backend
+    restart: always
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    env_file: ".env"
+    command:
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    ports:
+      - 4040:4040
+    depends_on:
+      - nginx
+    networks:
+      - local

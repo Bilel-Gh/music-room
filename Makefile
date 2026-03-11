@@ -6,7 +6,7 @@ dev:
 	cd backend && npm run dev
 
 dev-mobile:
-	cd mobile && npx expo start --tunnel
+	cd mobile && npx expo start
 
 dev-all:
 	$(MAKE) dev & $(MAKE) dev-mobile
