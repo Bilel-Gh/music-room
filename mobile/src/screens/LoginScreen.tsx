@@ -52,8 +52,8 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    redirectUri: "https://auth.expo.io/@bilelghandri/musicroom",
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
   });
 
   // TODO: remove debug log
@@ -138,14 +138,14 @@ export default function LoginScreen({ navigation }: Props) {
           <Text style={[styles.forgotText, { color: colors.primary }]}>Forgot password?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.googleButton, Platform.OS !== 'web' && !googleRequest && styles.buttonDisabled]}
-          onPress={handleGoogleLogin}
-          disabled={Platform.OS !== 'web' && !googleRequest}
-        >
-          <Text style={styles.googleButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
-
+          <TouchableOpacity
+            style={[styles.googleButton, Platform.OS !== 'web' && !googleRequest && styles.buttonDisabled]}
+            onPress={handleGoogleLogin}
+            disabled={Platform.OS !== 'web' && !googleRequest}
+          >
+            <Text style={styles.googleButtonText}>Continue with Google</Text>
+          </TouchableOpacity>
+  
         <TouchableOpacity onPress={() => navigation.navigate('Register')}>
           <Text style={styles.linkText}>
             Don't have an account? <Text style={[styles.linkBold, { color: colors.primary }]}>Sign up</Text>

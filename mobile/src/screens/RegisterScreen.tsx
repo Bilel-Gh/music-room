@@ -70,8 +70,8 @@ export default function RegisterScreen({ navigation }: Props) {
   };
 
   const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    redirectUri: "https://auth.expo.io/@bilelghandri/musicroom",
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
   });
 
   useEffect(() => {

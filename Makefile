@@ -1,12 +1,17 @@
+SHELL := /bin/bash
+
 install:
 	cd backend && npm install
 	cd mobile && npm install
 
-dev:
+dev-docker:
 	cd backend && npm run dev
 
+dev:
+	docker compose up --remove-orphans
+
 dev-mobile:
-	cd mobile && npx expo start
+	cd mobile && source .env && npx expo run:android
 
 dev-all:
 	$(MAKE) dev & $(MAKE) dev-mobile
