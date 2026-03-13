@@ -40,6 +40,16 @@ export async function verifyEmail(req: Request, res: Response, next: NextFunctio
   }
 }
 
+export async function resendVerification(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { email } = req.body;
+    const result = await authService.resendVerification(email);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function forgotPassword(req: Request, res: Response, next: NextFunction) {
   try {
     const { email } = req.body;

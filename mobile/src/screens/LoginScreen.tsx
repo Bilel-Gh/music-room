@@ -42,26 +42,28 @@ export default function LoginScreen({ navigation }: Props) {
       const { data } = await api.post('/auth/login', { email: email.trim(), password });
       await setTokens(data.data.accessToken, data.data.refreshToken);
     } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } }).response?.status;
       const message =
         (err as { response?: { data?: { error?: string } } }).response?.data?.error ||
         'Unable to log in';
-      crossAlert('Error', message);
+
+      if (status === 403) {
+        // Email not verified — backend already resent a new code
+        crossAlert('Verification required', 'A new verification code has been sent to your email', [
+          { text: 'OK', onPress: () => navigation.navigate('EmailVerification', { email: email.trim() }) },
+        ]);
+      } else {
+        crossAlert('Error', message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
   });
-
-  // TODO: remove debug log
-  useEffect(() => {
-    if (googleRequest) {
-      console.log('Google OAuth redirect URI:', googleRequest.redirectUri);
-    }
-  }, [googleRequest]);
 
   useEffect(() => {
     if (googleResponse?.type === 'success') {

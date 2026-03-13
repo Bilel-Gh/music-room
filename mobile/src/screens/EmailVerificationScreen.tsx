@@ -22,6 +22,7 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
   const { email } = route.params;
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const { colors } = useTheme();
   const { formMaxWidth } = useResponsive();
 
@@ -43,6 +44,20 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
       crossAlert('Error', msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      await api.post('/auth/resend-verification', { email });
+      crossAlert('Success', 'A new code has been sent to your inbox');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        || 'Unable to resend code';
+      crossAlert('Error', msg);
+    } finally {
+      setResending(false);
     }
   };
 
@@ -83,6 +98,12 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
           ) : (
             <Text style={styles.buttonText}>Verify</Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleResend} disabled={resending}>
+          <Text style={[styles.resendText, { color: colors.primary }]}>
+            {resending ? 'Sending...' : "Didn't receive the code? Resend"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleSkip}>
@@ -147,9 +168,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  resendText: {
+    textAlign: 'center',
+    marginTop: 16,
+    fontSize: 14,
+    fontWeight: '500',
+  },
   skipText: {
     textAlign: 'center',
-    marginTop: 18,
+    marginTop: 12,
     color: '#999',
     fontSize: 14,
   },

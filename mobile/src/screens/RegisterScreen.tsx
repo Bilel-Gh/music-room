@@ -41,6 +41,18 @@ export default function RegisterScreen({ navigation }: Props) {
       crossAlert('Error', 'Password must be at least 8 characters');
       return;
     }
+    if (!/[A-Z]/.test(password)) {
+      crossAlert('Error', 'Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      crossAlert('Error', 'Password must contain at least one digit');
+      return;
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      crossAlert('Error', 'Password must contain at least one special character');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -134,7 +146,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <TextInput
           style={styles.input}
-          placeholder="Password (8 characters min)"
+          placeholder="Password (8+ chars, A-Z, 0-9, special)"
           placeholderTextColor="#999"
           value={password}
           onChangeText={setPassword}
