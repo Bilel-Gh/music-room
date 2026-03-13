@@ -4,14 +4,15 @@ install:
 	cd backend && npm install
 	cd mobile && npm install
 
-dev:
+dev-docker:
 	cd backend && npm run dev
 
-dev-docker:
+dev:
 	docker compose up --remove-orphans
 
 dev-android:
-	cd mobile && npx expo run:android
+	cd ~/goinfre && mkdir -p ./avd
+	cd mobile && source .env && export GRADLE_USER_HOME=~/goinfre/.gradlehome && npx expo run:android
 
 dev-web:
 	cd mobile && npx expo start --web

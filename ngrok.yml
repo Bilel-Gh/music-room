@@ -1,9 +1,0 @@
-version: "2"
-region: eu
-tunnels:
-  web:
-    addr: nginx:80
-    proto: http
-    schemes:
-      - http
-      - https
