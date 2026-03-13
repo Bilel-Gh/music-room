@@ -3,8 +3,8 @@
 # Usage: ./scripts/load-test.sh
 
 SERVER="http://localhost:3001"
-EMAIL="artillery@loadtest.com"
-PASSWORD="password123"
+EMAIL="$(head -c 10 /dev/random | md5sum | cut -d' ' -f1)@loadtest.com"
+PASSWORD="Password1234!"
 
 echo "=== Load Test — Music Room API ==="
 echo ""
