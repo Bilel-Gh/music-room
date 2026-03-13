@@ -13,6 +13,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import api from '../services/api';
 import { crossAlert } from '../utils/alert';
+import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../theme/theme-context';
 import { useResponsive } from '../hooks/use-responsive';
 
@@ -23,6 +24,7 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const accessToken = useAuthStore((s) => s.accessToken);
   const { colors } = useTheme();
   const { formMaxWidth } = useResponsive();
 
@@ -36,7 +38,7 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
     try {
       await api.post('/auth/verify-email', { email, code });
       crossAlert('Success', 'Email verified!', [
-        { text: 'OK', onPress: () => navigation.navigate('MainTabs') },
+        { text: 'OK', onPress: () => navigation.navigate(accessToken ? 'MainTabs' : 'Login') },
       ]);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } }).response?.data?.error
@@ -106,9 +108,11 @@ export default function EmailVerificationScreen({ route, navigation }: Props) {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleSkip}>
-          <Text style={styles.skipText}>Skip for now</Text>
-        </TouchableOpacity>
+        {accessToken && (
+          <TouchableOpacity onPress={handleSkip}>
+            <Text style={styles.skipText}>Skip for now</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
