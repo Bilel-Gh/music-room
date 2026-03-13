@@ -6,7 +6,7 @@ const skipInTest = () => !!(process.env.NODE_ENV === 'test' || process.env.VITES
 // 5 attempts per 15-minute window per IP
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 15,
   skip: skipInTest,
   standardHeaders: true,
   legacyHeaders: false,

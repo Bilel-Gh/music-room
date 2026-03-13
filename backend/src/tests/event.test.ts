@@ -4,9 +4,9 @@ import app from '../app.js';
 import prisma from '../lib/prisma.js';
 
 const ts = Date.now();
-const creator = { email: `event-creator-${ts}@test.com`, password: 'password123', name: 'Creator' };
-const voter = { email: `event-voter-${ts}@test.com`, password: 'password123', name: 'Voter' };
-const outsider = { email: `event-outsider-${ts}@test.com`, password: 'password123', name: 'Outsider' };
+const creator = { email: `event-creator-${ts}@test.com`, password: 'Password123!', name: 'Creator' };
+const voter = { email: `event-voter-${ts}@test.com`, password: 'Password123!', name: 'Voter' };
+const outsider = { email: `event-outsider-${ts}@test.com`, password: 'Password123!', name: 'Outsider' };
 
 let creatorToken: string;
 let voterToken: string;
@@ -188,16 +188,23 @@ describe('Voting', () => {
     expect(res.body.data.voteCount).toBe(1);
   });
 
-  it('should reject double vote', async () => {
+  it('should toggle vote off on second vote', async () => {
     const res = await request(app)
       .post(`/api/events/${eventId}/tracks/${trackId}/vote`)
       .set('Authorization', `Bearer ${creatorToken}`)
       .send({});
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(200);
+    expect(res.body.data.voteCount).toBe(0);
   });
 
-  it('should allow a different user to vote', async () => {
+  it('creator re-votes and another user also votes', async () => {
+    // Creator votes again (toggle back on)
+    await request(app)
+      .post(`/api/events/${eventId}/tracks/${trackId}/vote`)
+      .set('Authorization', `Bearer ${creatorToken}`)
+      .send({});
+
     const res = await request(app)
       .post(`/api/events/${eventId}/tracks/${trackId}/vote`)
       .set('Authorization', `Bearer ${voterToken}`)
