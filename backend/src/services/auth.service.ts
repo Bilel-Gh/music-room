@@ -205,7 +205,10 @@ export async function googleMobileLogin(idToken: string) {
   const payload: GoogleTokenInfo = await res.json();
 
   const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-  if (payload.aud !== GOOGLE_CLIENT_ID) {
+  const GOOGLE_ANDROID_CLIENT_ID = process.env.GOOGLE_ANDROID_CLIENT_ID || '';
+  const allowedAudiences = [GOOGLE_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID].filter(Boolean);
+
+  if (!allowedAudiences.includes(payload.aud)) {
     throw Object.assign(new Error('Token audience mismatch'), { status: 401 });
   }
 

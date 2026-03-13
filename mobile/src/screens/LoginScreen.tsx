@@ -52,16 +52,9 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
   });
-
-  // TODO: remove debug log
-  useEffect(() => {
-    if (googleRequest) {
-      console.log('Google OAuth redirect URI:', googleRequest.redirectUri);
-    }
-  }, [googleRequest]);
 
   useEffect(() => {
     if (googleResponse?.type === 'success') {

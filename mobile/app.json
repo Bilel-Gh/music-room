@@ -4,7 +4,7 @@
     "slug": "musicroom",
     "owner": "music-rooms-organization",
     "version": "1.0.0",
-    "scheme": "musicroom",
+    "scheme": ["musicroom", "com.musicroomsorganization.musicroom"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
