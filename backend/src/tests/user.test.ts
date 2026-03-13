@@ -4,8 +4,8 @@ import app from '../app.js';
 import prisma from '../lib/prisma.js';
 
 const ts = Date.now();
-const userA = { email: `user-a-${ts}@test.com`, password: 'password123', name: 'User A' };
-const userB = { email: `user-b-${ts}@test.com`, password: 'password123', name: 'User B' };
+const userA = { email: `user-a-${ts}@test.com`, password: 'Password123!', name: 'User A' };
+const userB = { email: `user-b-${ts}@test.com`, password: 'Password123!', name: 'User B' };
 
 let tokenA: string;
 let tokenB: string;

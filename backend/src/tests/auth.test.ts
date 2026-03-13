@@ -6,7 +6,7 @@ import prisma from '../lib/prisma.js';
 const testEmail = `test-${Date.now()}@example.com`;
 const testUser = {
   email: testEmail,
-  password: 'password123',
+  password: 'Password123!',
   name: 'Test User',
 };
 
@@ -150,7 +150,7 @@ describe('POST /api/auth/forgot-password + reset-password', () => {
 
     const res = await request(app)
       .post('/api/auth/reset-password')
-      .send({ email: testEmail, code, password: 'newpassword456' });
+      .send({ email: testEmail, code, password: 'NewPassword456!' });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -159,7 +159,7 @@ describe('POST /api/auth/forgot-password + reset-password', () => {
   it('should login with new password', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: testEmail, password: 'newpassword456' });
+      .send({ email: testEmail, password: 'NewPassword456!' });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -168,7 +168,7 @@ describe('POST /api/auth/forgot-password + reset-password', () => {
   it('should reject invalid reset code', async () => {
     const res = await request(app)
       .post('/api/auth/reset-password')
-      .send({ email: testEmail, code: '000000', password: 'whatever123' });
+      .send({ email: testEmail, code: '000000', password: 'Whatever123!' });
 
     expect(res.status).toBe(400);
   });
@@ -187,7 +187,7 @@ describe('PUT /api/auth/link-google', () => {
     // Re-login to get a fresh token
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ email: testEmail, password: 'newpassword456' });
+      .send({ email: testEmail, password: 'NewPassword456!' });
 
     const token = loginRes.body.data.accessToken;
 

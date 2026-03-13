@@ -4,10 +4,10 @@ import app from '../app.js';
 import prisma from '../lib/prisma.js';
 
 const ts = Date.now();
-const owner = { email: `pl-owner-${ts}@test.com`, password: 'password123', name: 'Owner' };
-const editor = { email: `pl-editor-${ts}@test.com`, password: 'password123', name: 'Editor' };
-const viewer = { email: `pl-viewer-${ts}@test.com`, password: 'password123', name: 'Viewer' };
-const stranger = { email: `pl-stranger-${ts}@test.com`, password: 'password123', name: 'Stranger' };
+const owner = { email: `pl-owner-${ts}@test.com`, password: 'Password123!', name: 'Owner' };
+const editor = { email: `pl-editor-${ts}@test.com`, password: 'Password123!', name: 'Editor' };
+const viewer = { email: `pl-viewer-${ts}@test.com`, password: 'Password123!', name: 'Viewer' };
+const stranger = { email: `pl-stranger-${ts}@test.com`, password: 'Password123!', name: 'Stranger' };
 
 let ownerToken: string;
 let editorToken: string;
@@ -43,6 +43,12 @@ beforeAll(async () => {
 
   const resStranger = await request(app).post('/api/auth/register').send(stranger);
   strangerToken = resStranger.body.data.accessToken;
+
+  // Make test users premium so they can create/manage playlists
+  await prisma.user.updateMany({
+    where: { email: { in: [owner.email, editor.email, viewer.email, stranger.email] } },
+    data: { isPremium: true },
+  });
 });
 
 afterAll(async () => {
@@ -169,6 +175,18 @@ describe('Invite members', () => {
 });
 
 describe('Tracks — add, list, permissions', () => {
+  it('editor and viewer should accept their invitations', async () => {
+    const resEditor = await request(app)
+      .post(`/api/playlists/${invitePlaylistId}/accept`)
+      .set('Authorization', `Bearer ${editorToken}`);
+    expect(resEditor.status).toBe(200);
+
+    const resViewer = await request(app)
+      .post(`/api/playlists/${invitePlaylistId}/accept`)
+      .set('Authorization', `Bearer ${viewerToken}`);
+    expect(resViewer.status).toBe(200);
+  });
+
   it('anyone can add track on OPEN playlist', async () => {
     const res = await request(app)
       .post(`/api/playlists/${playlistId}/tracks`)
