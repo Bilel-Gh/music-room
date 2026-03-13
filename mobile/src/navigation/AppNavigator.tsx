@@ -263,6 +263,11 @@ export default function AppNavigator() {
               component={ResetPasswordScreen}
               options={{ title: 'Reset Password' }}
             />
+            <Stack.Screen
+              name="EmailVerification"
+              component={EmailVerificationScreen}
+              options={{ title: 'Verification' }}
+            />
           </>
         )}
       </Stack.Navigator>
