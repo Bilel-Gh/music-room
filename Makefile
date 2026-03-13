@@ -4,17 +4,17 @@ install:
 	cd backend && npm install
 	cd mobile && npm install
 
-dev-docker:
+dev:
 	cd backend && npm run dev
 
-dev:
+dev-docker:
 	docker compose up --remove-orphans
 
-dev-mobile:
-	cd mobile && source .env && npx expo run:android
+dev-android:
+	cd mobile && npx expo run:android
 
-dev-all:
-	$(MAKE) dev & $(MAKE) dev-mobile
+dev-web:
+	cd mobile && npx expo start --web
 
 build:
 	cd backend && npm run build
@@ -24,6 +24,9 @@ test:
 
 db-migrate:
 	cd backend && npx prisma migrate dev
+
+db-generate:
+	cd backend && npx prisma generate
 
 db-studio:
 	cd backend && npx prisma studio
