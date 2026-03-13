@@ -67,6 +67,18 @@ export async function login(email: string, password: string) {
   }
 
   if (!user.emailVerified) {
+    // Auto-resend a fresh verification code so the user isn't stuck
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { verificationCode, verificationCodeExpiry },
+    });
+
+    sendVerificationCode(user.email, verificationCode)
+      .catch(err => console.error('[MAIL] Failed to resend verification code:', err.message));
+
     throw Object.assign(new Error('Please verify your email before logging in'), { status: 403 });
   }
 
@@ -124,6 +136,28 @@ export async function verifyEmail(email: string, code: string) {
   });
 
   return { message: 'Email verified' };
+}
+
+export async function resendVerification(email: string) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) return { message: 'If this email exists, a new code has been sent' };
+
+  if (user.emailVerified) {
+    throw Object.assign(new Error('Email already verified'), { status: 400 });
+  }
+
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const verificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { verificationCode, verificationCodeExpiry },
+  });
+
+  sendVerificationCode(user.email, verificationCode)
+    .catch(err => console.error('[MAIL] Failed to resend verification code:', err.message));
+
+  return { message: 'If this email exists, a new code has been sent' };
 }
 
 export async function forgotPassword(email: string) {

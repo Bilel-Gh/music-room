@@ -8,6 +8,7 @@ import {
   loginSchema,
   refreshSchema,
   verifyEmailSchema,
+  resendVerificationSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   linkGoogleSchema,
@@ -131,6 +132,31 @@ router.post('/refresh', validate(refreshSchema), authController.refresh);
  *         description: User not found
  */
 router.post('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
+
+/**
+ * @swagger
+ * /auth/resend-verification:
+ *   post:
+ *     summary: Resend email verification code
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: jean@example.com
+ *     responses:
+ *       200:
+ *         description: Code resent if email exists
+ *       400:
+ *         description: Email already verified
+ */
+router.post('/resend-verification', authLimiter, validate(resendVerificationSchema), authController.resendVerification);
 
 /**
  * @swagger
